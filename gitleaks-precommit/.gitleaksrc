@@ -1,5 +1,5 @@
 {
-  "version": "",
+  "version": "8.27.2",
   "exclusions": [
     "package-lock.json",
     "yarn.lock"
