@@ -1,0 +1,40 @@
+# Gitleaks configuration template
+# Created by gitleaks-precommit
+version = "8.28.0"
+
+title = "Custom Secret Detection Rules"
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Detection"
+regex = '''(?i)(?:key|api|token|secret|password)[=:]["']?([a-z0-9]{32,90})["']?'''
+tags = ["key", "api", "token", "secret"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key ID"
+regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+tags = ["aws", "key"]
+
+[[rules]]
+id = "google-api-key"
+description = "Google API Key"
+regex = '''AIza[0-9A-Za-z\\-_]{35}'''
+tags = ["google", "key"]
+
+# Exclude common false positives
+[allowlist]
+files = [
+  "package-lock.json",
+  "yarn.lock",
+  "*.lock",
+  "*.min.js",
+  "*.snap"
+]
+paths = [
+  "**/test/**",
+  "**/tests/**",
+  "**/mock/**",
+  "**/mocks/**"
+]
+commits = []

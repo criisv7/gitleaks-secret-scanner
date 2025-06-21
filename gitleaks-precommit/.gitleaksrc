@@ -1,0 +1,7 @@
+{
+  "version": "",
+  "exclusions": [
+    "package-lock.json",
+    "yarn.lock"
+  ]
+}
