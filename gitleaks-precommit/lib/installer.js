@@ -2,29 +2,48 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const https = require('https');
-const crypto = require('crypto');
-const axios = require('axios');
 const tar = require('tar');
 const unzipper = require('unzipper').Open;
-const fsExtra = require('fs-extra');
+const axios = require('axios');
+
+// Debugging: Show environment information
+console.log('Platform:', os.platform());
+console.log('Architecture:', os.arch());
+
+// Safe package info loading
+let packageInfo = { 
+  name: 'gitleaks-secret-scanner', 
+  version: '1.0.2',
+  repository: { url: 'https://github.com/criisv7/gitleaks-secret-scanner' }
+};
+
+try {
+  const packagePath = path.join(__dirname, '..', 'package.json');
+  console.log('Looking for package.json at:', packagePath);
+  
+  if (fs.existsSync(packagePath)) {
+    packageInfo = require(packagePath);
+    console.log('Loaded package info:', packageInfo.name, packageInfo.version);
+  } else {
+    console.warn('⚠️ package.json not found, using fallback info');
+  }
+} catch (e) {
+  console.warn('⚠️ Error loading package.json:', e.message);
+}
 
 const CACHE_DIR = path.join(os.homedir(), '.gitleaks-cache');
 const VERSION_FILE = path.join(CACHE_DIR, 'version-info.json');
 
-let packageInfo = { name: 'gitleaks-secret-scanner', version: '1.0.0' };
-try {
-  packageInfo = require(path.join(__dirname, '../package.json'));
-} catch (e) {
-  console.warn('⚠️ Using fallback package information');
-}
 // Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
+  console.log('Created cache directory:', CACHE_DIR);
 }
 
 // Get latest version from GitHub API
 async function getLatestVersion() {
   try {
+    console.log('Fetching latest version from GitHub API...');
     const { data } = await axios.get(
       'https://api.github.com/repos/gitleaks/gitleaks/releases/latest',
       {
@@ -35,10 +54,12 @@ async function getLatestVersion() {
         timeout: 3000
       }
     );
-    return data.tag_name.replace(/^v/, '');
+    const version = data.tag_name.replace(/^v/, '');
+    console.log('Latest Gitleaks version:', version);
+    return version;
   } catch (error) {
     console.warn('⚠️ Could not fetch latest version from GitHub API');
-    console.warn('Using fallback version. Error details:', error.message);
+    console.warn('Error details:', error.message);
     return '8.28.0'; // Fallback version
   }
 }
@@ -72,35 +93,43 @@ module.exports.installGitleaks = async (config) => {
   const arch = os.arch();
   const binaryName = platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
 
-  // Determine version (config > cache > latest)
+  // Determine version
   let version = config.version || (await checkVersionUpdate()).latest || '8.28.0';
+  console.log('Using Gitleaks version:', version);
   
   const versionDir = path.join(CACHE_DIR, `v${version}`);
   const binaryPath = path.join(versionDir, binaryName);
 
   // Use cached binary if available
   if (fs.existsSync(binaryPath)) {
+    console.log('Using cached binary:', binaryPath);
     return binaryPath;
   }
 
   // Create version directory
   if (!fs.existsSync(versionDir)) {
     fs.mkdirSync(versionDir, { recursive: true });
+    console.log('Created version directory:', versionDir);
   }
 
   // Download and extract
   const fileName = getFileName(version, platform, arch);
-  const url = `https://github.com/gitleaks/releases/download/v${version}/${fileName}`;
-  await downloadAndExtract(url, versionDir);
+  const downloadUrl = `https://github.com/gitleaks/gitleaks/releases/download/v${version}/${fileName}`;
+  
+  console.log('Downloading from:', downloadUrl);
+  await downloadAndExtract(downloadUrl, versionDir);
+  
   // Make executable
   if (platform !== 'win32') {
     fs.chmodSync(binaryPath, 0o755);
+    console.log('Made binary executable');
   }
   
   return binaryPath;
 };
 
 function getFileName(version, platform, arch) {
+  // Normalize architecture names
   const normalizedArch = arch === 'x64' ? 'amd64' : 
                          arch.startsWith('arm') ? 'arm64' : arch;
   
@@ -112,20 +141,32 @@ function getFileName(version, platform, arch) {
   };
   
   const osName = platformMap[platform] || platform;
-  const ext = platform === 'win32' ? 'zip' : 'tar.gz';
+  if (!osName) {
+    throw new Error(`Unsupported platform: ${platform}`);
+  }
   
-  return `gitleaks_${version}_${osName}_${normalizedArch}.${ext}`;
+  const ext = platform === 'win32' ? 'zip' : 'tar.gz';
+  const fileName = `gitleaks_${version}_${osName}_${normalizedArch}.${ext}`;
+  
+  console.log('Generated file name:', fileName);
+  return fileName;
 }
+
 async function downloadAndExtract(url, targetDir) {
   return new Promise((resolve, reject) => {
+    console.log('Starting download...');
     const headers = {
       'User-Agent': `${packageInfo.name}/${packageInfo.version}`
     };
 
     https.get(url, { headers }, response => {
-      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-        // Handle redirects
-        return downloadAndExtract(response.headers.location, targetDir)
+      console.log('Response status:', response.statusCode);
+      
+      // Handle redirects
+      if ([301, 302, 307, 308].includes(response.statusCode)) {
+        const redirectUrl = response.headers.location;
+        console.log('Redirecting to:', redirectUrl);
+        return downloadAndExtract(redirectUrl, targetDir)
           .then(resolve)
           .catch(reject);
       }
@@ -139,7 +180,10 @@ async function downloadAndExtract(url, targetDir) {
         : tar.x({ C: targetDir });
 
       response.pipe(extractor)
-        .on('close', resolve)
+        .on('close', () => {
+          console.log('Extraction complete');
+          resolve();
+        })
         .on('error', reject);
     }).on('error', reject);
   });
