@@ -11,6 +11,12 @@ const fsExtra = require('fs-extra');
 const CACHE_DIR = path.join(os.homedir(), '.gitleaks-cache');
 const VERSION_FILE = path.join(CACHE_DIR, 'version-info.json');
 
+let packageInfo = { name: 'gitleaks-secret-scanner', version: '1.0.0' };
+try {
+  packageInfo = require(path.join(__dirname, '../package.json'));
+} catch (e) {
+  console.warn('⚠️ Using fallback package information');
+}
 // Ensure cache directory exists
 if (!fs.existsSync(CACHE_DIR)) {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
@@ -23,7 +29,7 @@ async function getLatestVersion() {
       'https://api.github.com/repos/gitleaks/gitleaks/releases/latest',
       {
         headers: {
-          'User-Agent': `gitleaks-precommit/${require('../../package.json').version} (+https://github.com/your-username/gitleaks-precommit)`,
+          'User-Agent': `${packageInfo.name}/${packageInfo.version}`,
           'Accept': 'application/vnd.github.v3+json'
         },
         timeout: 3000
@@ -84,10 +90,8 @@ module.exports.installGitleaks = async (config) => {
 
   // Download and extract
   const fileName = getFileName(version, platform, arch);
-  const url = `https://github.com/gitleaks/gitleaks/releases/download/v${version}/${fileName}`;
-  
+  const url = `https://github.com/gitleaks/releases/download/v${version}/${fileName}`;
   await downloadAndExtract(url, versionDir);
-  
   // Make executable
   if (platform !== 'win32') {
     fs.chmodSync(binaryPath, 0o755);
@@ -97,10 +101,10 @@ module.exports.installGitleaks = async (config) => {
 };
 
 function getFileName(version, platform, arch) {
-  // Normalize architecture names
-  const normalizedArch = arch === 'x64' ? 'amd64' : arch;
+  const normalizedArch = arch === 'x64' ? 'amd64' : 
+                         arch.startsWith('arm') ? 'arm64' : arch;
   
-  // Map platform names to Gitleaks naming convention
+  // Map platform names
   const platformMap = {
     'darwin': 'darwin',
     'linux': 'linux',
@@ -112,20 +116,18 @@ function getFileName(version, platform, arch) {
   
   return `gitleaks_${version}_${osName}_${normalizedArch}.${ext}`;
 }
-
 async function downloadAndExtract(url, targetDir) {
   return new Promise((resolve, reject) => {
     const headers = {
-      'User-Agent': `gitleaks-precommit/${require('../../package.json').version} (+https://github.com/your-username/gitleaks-precommit)`
+      'User-Agent': `${packageInfo.name}/${packageInfo.version}`
     };
 
     https.get(url, { headers }, response => {
-      // Handle GitHub rate limits
-      if (response.statusCode === 403 && response.headers['x-ratelimit-remaining'] === '0') {
-        const resetTime = new Date(parseInt(response.headers['x-ratelimit-reset']) * 1000);
-        return reject(new Error(
-          `GitHub API rate limit exceeded. Try again after ${resetTime.toLocaleTimeString()}`
-        ));
+      if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+        // Handle redirects
+        return downloadAndExtract(response.headers.location, targetDir)
+          .then(resolve)
+          .catch(reject);
       }
 
       if (response.statusCode !== 200) {
