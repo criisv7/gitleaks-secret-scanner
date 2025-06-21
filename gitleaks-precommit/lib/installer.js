@@ -84,7 +84,7 @@ async function checkVersionUpdate() {
       console.warn('⚠️ Version check update failed:', error.message);
     }
   }
-  
+  console.log('Version info:', versionInfo);
   return versionInfo;
 }
 
@@ -94,7 +94,7 @@ module.exports.installGitleaks = async (config) => {
   const binaryName = platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
 
   // Determine version
-  let version = config.version || (await checkVersionUpdate()).latest || '8.27.2';
+  let version = config.version  || '8.27.2';
   console.log('Using Gitleaks version:', version);
   
   const versionDir = path.join(CACHE_DIR, `v${version}`);
@@ -115,7 +115,6 @@ module.exports.installGitleaks = async (config) => {
   // Download and extract
   const fileName = getFileName(version, platform, arch);
   const downloadUrl = `https://github.com/gitleaks/gitleaks/releases/download/v${version}/${fileName}`;
-  https://github.com/gitleaks/gitleaks/releases/download/v${version}/${fileName}
   console.log('Downloading from:', downloadUrl);
   await downloadAndExtract(downloadUrl, versionDir);
   
