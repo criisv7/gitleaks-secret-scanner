@@ -2,18 +2,18 @@ const fs = require('fs');
 const path = require('path');
 const toml = require('toml');
 
-
 module.exports.loadConfig = async () => {
   const config = {
     version: null,
     configPath: null,
-    additionalArgs: [],
     htmlReport: null,
+    reportFormat: null,
+    reportPath: null,
+    diffMode: 'staged', 
+    debug: false,
+    additionalArgs: [] 
   };
 
-
-
-  // Check for .gitleaksrc in project root
   const rcPath = path.join(process.cwd(), '.gitleaksrc');
   if (fs.existsSync(rcPath)) {
     try {
@@ -24,40 +24,65 @@ module.exports.loadConfig = async () => {
     }
   }
 
-  // Auto-detect TOML configuration
-  const tomlPaths = [
-    '.gitleaks.toml',
-    'gitleaks.toml',
-    '.gitleaks/config.toml'
-  ];
-const args = process.argv.slice(2);
-  let filteredArgs = [];
+  const args = process.argv.slice(2);
+  const remainingArgs = [];
   
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--html-report') {
-      if (args[i + 1]) {
-        config.htmlReport = args[i + 1];
-        i++; // Skip next argument (the path)
-      } else {
-        console.warn('⚠️ --html-report requires a file path');
-      }
-    } else {
-      filteredArgs.push(args[i]);
+    const arg = args[i];
+    const val = args[i + 1];
+
+    const isFlagWithValue = (v) => v && !v.startsWith('--');
+
+    switch (arg) {
+      case '--html-report':
+        if (isFlagWithValue(val)) { 
+          config.htmlReport = val;
+          i++; 
+        } else {
+          config.htmlReport = 'gitleaks-report.html'; // Set the default path
+        }
+        break;
+      case '--report-format':
+      case '-f':
+        if (isFlagWithValue(val)) { config.reportFormat = val; i++; }
+        else { console.warn('⚠️ --report-format (-f) flag requires a format.'); }
+        break;
+      case '--report-path':
+      case '-r':
+        if (isFlagWithValue(val)) { config.reportPath = val; i++; }
+        else { console.warn('⚠️ --report-path (-r) flag requires a path.'); }
+        break;
+      case '--diff-mode':
+        if (isFlagWithValue(val)) { config.diffMode = val; i++; }
+        else { console.warn('⚠️ --diff-mode flag requires a mode (staged/all/ci).'); }
+        break;
+      case '--debug':
+        config.debug = true;
+        break;
+      default:
+        remainingArgs.push(arg);
+        break;
     }
   }
   
-  config.additionalArgs = filteredArgs;
+  config.additionalArgs = remainingArgs;
 
+  const validDiffModes = ['staged', 'all', 'ci'];
+  if (!validDiffModes.includes(config.diffMode)) {
+    console.warn(`⚠️ Invalid diff mode: ${config.diffMode}. Defaulting to 'staged'.`);
+    config.diffMode = 'staged';
+  }
+
+  // Auto-detect .gitleaks.toml config
+  const tomlPaths = ['.gitleaks.toml', 'gitleaks.toml', '.gitleaks/config.toml'];
   for (const tomlPath of tomlPaths) {
     const fullPath = path.join(process.cwd(), tomlPath);
     if (fs.existsSync(fullPath)) {
       config.configPath = fullPath;
-      
-      // Extract version from TOML if specified
       try {
         const tomlContent = fs.readFileSync(fullPath, 'utf8');
         const parsed = toml.parse(tomlContent);
-        if (parsed.version) {
+        if (parsed.version && !config.version) {
           config.version = parsed.version;
         }
       } catch (error) {

@@ -48,3 +48,12 @@ module.exports.disclaimer = ()=>{
 };
 module.exports.version = ()=>{
   console.log(`Loaded package info:${packageInfo.name}, ${packageInfo.version}`)};
+
+module.exports.options = ()=>{
+console.log(`
+Options:
+  --diff-mode <mode>   Set scan scope [staged|all] (default: staged)
+  --html-report <path> Generate HTML report
+  --debug              Enable debug output
+  --install-only       Skip scanning
+`);};

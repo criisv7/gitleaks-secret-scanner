@@ -2,11 +2,13 @@
 const { installGitleaks } = require('../lib/installer');
 const { runScan } = require('../lib/scanner');
 const { loadConfig } = require('../lib/config');
-const { showAttribution ,version} = require('../lib/attribution');
+const { showAttribution ,version,options} = require('../lib/attribution');
 const isInstallOnly = process.argv.includes('--install-only');
 const isInit = process.argv.includes('--init');
 const showVersion = process.argv.includes('--version');
 const showAbout = process.argv.includes('--about');
+const showOptions = process.argv.includes('--options');
+
 if (showVersion) {
 version();
 process.exit(0);
@@ -14,6 +16,10 @@ process.exit(0);
 // Handle about command
 if (showAbout) {
   showAttribution();
+  process.exit(0);
+}
+if (showOptions) {
+  options();
   process.exit(0);
 }
 let config;
@@ -42,6 +48,7 @@ let config;
         console.log('✅ Scan completed successfully');
       }
     }
+    process.exit(0);
   } catch (error) {
     console.error(`❌ ${error.message}`);
     if (error.message.includes('Secrets detected') && config && config.htmlReport) {

@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
 
-// HTML template with styling
 const HTML_TEMPLATE = (reportData) => `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -209,42 +208,42 @@ const HTML_TEMPLATE = (reportData) => `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Helper to escape HTML special characters
+
 function escapeHtml(unsafe) {
   if (!unsafe) return '';
   return unsafe.toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+    .replace(/&/g, "&")
+    .replace(/</g, "<")
+    .replace(/>/g, ">")
+    .replace(/"/g, `"`)
+    .replace(/'/g, "'");
 }
 
 module.exports.generateHtmlReport = (jsonPath, htmlPath) => {
   try {
-    // Read JSON data
-    const jsonData = fs.readFileSync(jsonPath, 'utf8');
-    const leaks = JSON.parse(jsonData);
+    let leaks = [];
+    if (jsonPath && fs.existsSync(jsonPath)) {
+      const jsonData = fs.readFileSync(jsonPath, 'utf8');
+      if (jsonData) {
+        leaks = JSON.parse(jsonData);
+      }
+    }
     
-    // Prepare report data
     const reportData = {
       leaks,
       filesScanned: leaks.length ? new Set(leaks.map(l => l.File)).size : 0,
       scanTime: new Date().toLocaleTimeString(),
       packageVersion: require('../package.json').version,
-      version: '8.x' // Default version
+      version: '8.x'
     };
 
-    // Generate HTML content
     const htmlContent = HTML_TEMPLATE(reportData);
     
-    // Ensure output directory exists
     const outputDir = path.dirname(htmlPath);
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
     
-    // Write HTML file
     fs.writeFileSync(htmlPath, htmlContent);
   } catch (error) {
     throw new Error(`HTML report generation failed: ${error.message}`);

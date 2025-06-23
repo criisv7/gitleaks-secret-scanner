@@ -4,156 +4,120 @@ const path = require('path');
 const os = require('os');
 const { generateHtmlReport } = require('./report-generator');
 
-// Helper to get default report path
 function getDefaultReportPath(format) {
-  const baseName = 'gitleaks-report';
-  const extMap = {
-    json: 'json',
-    csv: 'csv',
-    sarif: 'sarif',
-    junit: 'xml',
-    template: 'txt'
-  };
-  return `${baseName}.${extMap[format] || format}`;
+  const ext = { json: 'json', csv: 'csv', sarif: 'sarif', junit: 'xml' }[format] || format;
+  return `gitleaks-report.${ext}`;
+}
+
+function createEmptyReport(format, reportPath) {
+  let content = '';
+  switch (format) {
+    case 'json': content = '[]'; break;
+    case 'csv': content = 'commit,author,date,email,file,line,message,rule,secret,tags\n'; break;
+    case 'junit': content = '<?xml version="1.0" encoding="UTF-8"?>\n<testsuites name="gitleaks"></testsuites>'; break;
+    case 'sarif': content = JSON.stringify({ $schema: "https://schemastore.azurewebsites.net/schemas/json/sarif-2.1.0-rtm.5.json", version: "2.1.0", runs: [{ tool: { driver: { name: "gitleaks" } }, results: [] }] }, null, 2); break;
+    default: content = '';
+  }
+  fs.writeFileSync(reportPath, content, 'utf8');
+  console.log(`✅ Created empty ${format.toUpperCase()} report: ${reportPath}`);
 }
 
 module.exports.runScan = (binaryPath, config) => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     if (!fs.existsSync(binaryPath)) {
       return reject(new Error('Gitleaks binary missing'));
     }
 
-    const args = [
-      'detect',
-      '--source', '.',
-      '--pipe', // Keep pipe for staged changes
-      '--redact',
-      '--exit-code', '1'
-    ];
-
-    // Handle report generation
-    let jsonOutputPath = null;
-    let hasReportArgs = false;
-    let reportFormat = null;
-    let reportPath = null;
-    
-    // First, check if user has specified any report arguments
-    if (config.additionalArgs) {
-      hasReportArgs = config.additionalArgs.some(arg => 
-        ['--report-format', '-f', '--report-path', '-r'].includes(arg)
-      );
-      
-      // Extract report format
-      const formatIndex = config.additionalArgs.findIndex(arg => 
-        ['--report-format', '-f'].includes(arg)
-      );
-      
-      if (formatIndex !== -1) {
-        reportFormat = config.additionalArgs[formatIndex + 1];
+    // --- Reporting Logic ---
+    let targetReport = null;
+    let tempJsonPath = null;
+    if (config.reportFormat) {
+      if (config.htmlReport) {
+        console.warn(`⚠️ Both --report-format and --html-report were specified. Ignoring --html-report and generating a ${config.reportFormat.toUpperCase()} report.`);
       }
-      
-      // Check if report path is missing
-      const pathIndex = config.additionalArgs.findIndex(arg => 
-        ['--report-path', '-r'].includes(arg)
-      );
-      
-      if (formatIndex !== -1 && pathIndex === -1) {
-        // Generate default report path
-        reportPath = getDefaultReportPath(reportFormat);
-        args.push('--report-path', reportPath);
-        console.log(`ℹ️ Using default report path: ${reportPath}`);
-      }
+      targetReport = { format: config.reportFormat, path: config.reportPath || getDefaultReportPath(config.reportFormat) };
+    } else if (config.htmlReport) {
+      targetReport = { format: 'html', path: config.htmlReport };
+      tempJsonPath = path.join(os.tmpdir(), `gitleaks-temp-${Date.now()}.json`);
+    }
+    const detectArgs = ['detect', '--source', '.', '--pipe', '--redact', '--exit-code', '1'];
+    if (targetReport && targetReport.format !== 'html') {
+      detectArgs.push('--report-format', targetReport.format, '--report-path', targetReport.path);
+    } else if (tempJsonPath) {
+      detectArgs.push('--report-format', 'json', '--report-path', tempJsonPath);
+    }
+    if (config.configPath) detectArgs.push('--config', config.configPath);
+    if (config.additionalArgs) detectArgs.push(...config.additionalArgs);
+    if (config.debug) { detectArgs.push('--log-level', 'debug'); } else { detectArgs.push('-v'); }
+    if (config.debug) { console.log('[DEBUG] Target report config:', targetReport); }
+
+
+    let diffCommand;
+    switch (config.diffMode) {
+      case 'all':
+        diffCommand = ['diff', 'HEAD'];
+        break;
+      case 'ci':
+        const baseSha = process.env.CI_MERGE_REQUEST_DIFF_BASE_SHA;
+        const currentSha = process.env.CI_COMMIT_SHA;
+
+        if (!baseSha || !currentSha) {
+          return reject(new Error(
+            'For --diff-mode ci, the environment variables CI_MERGE_REQUEST_DIFF_BASE_SHA and CI_COMMIT_SHA must be set. This mode is designed for GitLab CI merge request pipelines.'
+          ));
+        }
+        
+        // The '..' syntax compares the tips of the two commits.
+        diffCommand = ['diff', `${baseSha}..${currentSha}`];
+        break;
+      case 'staged':
+      default:
+        diffCommand = ['diff', '--cached'];
+        break;
     }
 
-    // Only handle HTML report if no other report format specified
-    if (config.htmlReport && !hasReportArgs) {
-      jsonOutputPath = path.join(
-        os.tmpdir(),
-        `gitleaks-temp-${Date.now()}.json`
-      );
-      args.push('--report-format', 'json');
-      args.push('--report-path', jsonOutputPath);
-    }
-
-    // Add config path if specified
-    if (config.configPath) {
-      args.push('--config', config.configPath);
-    }
-
-    // Add additional arguments (including report args if specified)
-    if (config.additionalArgs) {
-      args.push(...config.additionalArgs);
-    }
-
-    // Add verbosity flags
     if (config.debug) {
-      args.push('--log-level', 'debug');
-    } else {
-      args.push('-v');
+        console.log(`[DEBUG] Using git diff command: git ${diffCommand.join(' ')}`);
     }
 
-    // Debug logging
-    if (config.debug) {
-      console.log('[DEBUG] Final command:', binaryPath, ...args);
-      console.log('[DEBUG] Config:', config);
-      console.log('[DEBUG] HTML Report Path:', config.htmlReport);
-      console.log('[DEBUG] JSON Temp Path:', jsonOutputPath);
-    }
+    const gitDiff = spawn('git', diffCommand);
+    const gitleaks = spawn(binaryPath, detectArgs);
 
-    // Run git diff
-    const gitDiff = spawn('git', ['diff', '--cached']);
-    
-    // Run gitleaks
-    const gitleaks = spawn(binaryPath, args);
-
-    // Pipe git diff to gitleaks
     gitDiff.stdout.pipe(gitleaks.stdin);
-
-    // Handle output streams
-    gitleaks.stdout.on('data', (data) => {
-      const output = data.toString();
-      if (config.debug) console.log('[DEBUG] Gitleaks stdout:', output);
-      process.stdout.write(data);
-    });
-    
-    gitleaks.stderr.on('data', (data) => {
-      const errorOutput = data.toString();
-      if (config.debug) console.log('[DEBUG] Gitleaks stderr:', errorOutput);
-      process.stderr.write(data);
-    });
-
-    gitleaks.on('close', (code) => {
+    gitleaks.stdout.on('data', data => process.stdout.write(data));
+    gitleaks.stderr.on('data', data => process.stderr.write(data));
+    gitDiff.on('error', err => reject(new Error(`git diff failed: ${err.message}`)));
+    gitleaks.on('error', err => reject(new Error(`Gitleaks execution failed: ${err.message}`)));
+    gitleaks.on('close', async (code) => {
       try {
-        // Generate HTML report if requested and no other report format was specified
-        if (config.htmlReport && !hasReportArgs && jsonOutputPath && fs.existsSync(jsonOutputPath)) {
-          if (config.debug) console.log('[DEBUG] Generating HTML report');
-          generateHtmlReport(jsonOutputPath, config.htmlReport);
-          console.log(`✅ HTML report generated: ${config.htmlReport}`);
-          if (config.debug) console.log('[DEBUG] Cleaning up JSON temp file');
-          fs.unlinkSync(jsonOutputPath);
+        if (targetReport) {
+          if (code === 0) {
+            if (targetReport.format === 'html') {
+              generateHtmlReport(null, targetReport.path);
+              console.log(`✅ Created empty HTML report: ${targetReport.path}`);
+            } else {
+              createEmptyReport(targetReport.format, targetReport.path);
+            }
+          } else if (code === 1) {
+            if (targetReport.format === 'html' && tempJsonPath) {
+              generateHtmlReport(tempJsonPath, targetReport.path);
+              console.log(`✅ HTML report generated from findings: ${targetReport.path}`);
+            } else {
+              console.log(`✅ ${targetReport.format.toUpperCase()} report generated with findings: ${targetReport.path}`);
+            }
+          }
         }
-
-        if (code === 0) {
-          resolve();
-        } else if (code === 1) {
-          reject(new Error('Secrets detected in commit'));
-        } else {
-          reject(new Error(`Gitleaks exited with code ${code}`));
-        }
+        if (code === 0) { resolve(); } 
+        else if (code === 1) { reject(new Error('Secrets detected in commit')); } 
+        else { reject(new Error(`Gitleaks exited with code ${code}`)); }
       } catch (reportError) {
-        if (config.debug) console.error('[DEBUG] Report error:', reportError);
         reject(new Error(`Report generation failed: ${reportError.message}`));
+      } finally {
+        if (tempJsonPath && fs.existsSync(tempJsonPath)) {
+          if (config.debug) console.log(`[DEBUG] Cleaning up temp file: ${tempJsonPath}`);
+          fs.unlinkSync(tempJsonPath);
+        }
       }
-    });
-    
-    gitDiff.on('error', (error) => {
-      if (config.debug) console.error('[DEBUG] git diff error:', error);
-      reject(new Error(`git diff failed: ${error.message}`));
-    });
-    
-    gitleaks.on('error', (error) => {
-      if (config.debug) console.error('[DEBUG] Gitleaks error:', error);
-      reject(new Error(`Gitleaks execution failed: ${error.message}`));
     });
   });
 };

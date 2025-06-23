@@ -1,13 +1,13 @@
 {
   "name": "gitleaks-secret-scanner",
-  "version": "1.0.0",
+  "version": "2.0.1",
+  "description": "Auto-installing Gitleaks with custom TOML rule support for pre-commit secret scanning",
   "main": "bin/cli.js",
+  "bin": {
+    "gitleaks-secret-scanner": "bin/cli.js"
+  },
   "scripts": {
     "postinstall": "node bin/set-permissions.js && node bin/cli.js --install-only"
-  },
-  "description": "Auto-installing Gitleaks with custom TOML rule support for pre-commit secret scanning",
-  "bin": {
-    "gitleaks-secret-scanner": "./bin/cli.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
@@ -19,8 +19,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/criisv7/gitleaks-secret-scanner"
+    "url": "git+https://github.com/criisv7/gitleaks-secret-scanner.git"
   },
+  "homepage": "https://github.com/criisv7/gitleaks-secret-scanner#readme",
+  "url": "https://github.com/criisv7/gitleaks-secret-scanner/issues",
   "keywords": [
     "security",
     "gitleaks",
@@ -32,10 +34,8 @@
   "engines": {
     "node": ">=18"
   },
-  "files": [
-    "bin",
-    "lib",
-    "templates",
-    "LICENSE"
-  ]
+  "files": ["bin", "lib", "templates", "LICENSE", "README.md"],
+  "bugs": {
+    "url": "https://github.com/criisv7/gitleaks-secret-scanner/issues"
+  }
 }
