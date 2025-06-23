@@ -1,7 +1,8 @@
 {
   "name": "gitleaks-secret-scanner",
-  "version": "2.0.1",
+  "version": "1.0.0",
   "description": "Auto-installing Gitleaks with custom TOML rule support for pre-commit secret scanning",
+  "author": "Vijay Kumar",
   "main": "bin/cli.js",
   "bin": {
     "gitleaks-secret-scanner": "bin/cli.js"
@@ -34,7 +35,13 @@
   "engines": {
     "node": ">=18"
   },
-  "files": ["bin", "lib", "templates", "LICENSE", "README.md"],
+  "files": [
+    "bin",
+    "lib",
+    "templates",
+    "LICENSE",
+    "README.md"
+  ],
   "bugs": {
     "url": "https://github.com/criisv7/gitleaks-secret-scanner/issues"
   }

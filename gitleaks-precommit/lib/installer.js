@@ -8,7 +8,7 @@ const axios = require('axios');
 
 let packageInfo = { 
   name: 'gitleaks-secret-scanner', 
-  version: '2.0.1',
+  version: '1.0.0',
   repository: { url: 'https://github.com/criisv7/gitleaks-secret-scanner' }
 };
 
