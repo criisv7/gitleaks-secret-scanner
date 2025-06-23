@@ -2,15 +2,24 @@
 const { installGitleaks } = require('../lib/installer');
 const { runScan } = require('../lib/scanner');
 const { loadConfig } = require('../lib/config');
-const { showAttribution, disclaimer } = require('../lib/attribution');
-
+const { showAttribution ,version} = require('../lib/attribution');
 const isInstallOnly = process.argv.includes('--install-only');
 const isInit = process.argv.includes('--init');
+const showVersion = process.argv.includes('--version');
+const showAbout = process.argv.includes('--about');
+if (showVersion) {
+version();
+process.exit(0);
+}
+// Handle about command
+if (showAbout) {
+  showAttribution();
+  process.exit(0);
+}
+let config;
 
 (async () => {
   try {
-    showAttribution();
-    
     if (isInit) {
       await initConfig();
       return;
@@ -21,23 +30,29 @@ const isInit = process.argv.includes('--init');
       return;
     }
 
-    const config = await loadConfig();
+    config = await loadConfig(); 
     const binaryPath = await installGitleaks(config);
     
     if (!isInstallOnly) {
       await runScan(binaryPath, config);
-      console.log('✅ No secrets found in commit');
+      
+      if (!config.htmlReport) {
+        console.log('✅ No secrets found in commit');
+      } else {
+        console.log('✅ Scan completed successfully');
+      }
     }
   } catch (error) {
     console.error(`❌ ${error.message}`);
-    console.log(disclaimer);
+    if (error.message.includes('Secrets detected') && config && config.htmlReport) {
+      console.log(`ℹ️ HTML report generated at: ${config.htmlReport}`);
+    } else if (error.message.includes('Report generation')) {
+      console.log('⚠️ Report generation failed. Try running with --debug for more info');
+    }
     
-    // Additional debugging information
-    console.log('\nAdditional debugging information:');
     console.log('Node version:', process.version);
     console.log('Platform:', process.platform);
     console.log('Architecture:', process.arch);
-    
     process.exit(1);
   }
 })();

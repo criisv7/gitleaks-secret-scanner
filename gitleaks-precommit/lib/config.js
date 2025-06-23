@@ -2,12 +2,16 @@ const fs = require('fs');
 const path = require('path');
 const toml = require('toml');
 
+
 module.exports.loadConfig = async () => {
   const config = {
     version: null,
     configPath: null,
-    additionalArgs: []
+    additionalArgs: [],
+    htmlReport: null,
   };
+
+
 
   // Check for .gitleaksrc in project root
   const rcPath = path.join(process.cwd(), '.gitleaksrc');
@@ -26,6 +30,23 @@ module.exports.loadConfig = async () => {
     'gitleaks.toml',
     '.gitleaks/config.toml'
   ];
+const args = process.argv.slice(2);
+  let filteredArgs = [];
+  
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--html-report') {
+      if (args[i + 1]) {
+        config.htmlReport = args[i + 1];
+        i++; // Skip next argument (the path)
+      } else {
+        console.warn('⚠️ --html-report requires a file path');
+      }
+    } else {
+      filteredArgs.push(args[i]);
+    }
+  }
+  
+  config.additionalArgs = filteredArgs;
 
   for (const tomlPath of tomlPaths) {
     const fullPath = path.join(process.cwd(), tomlPath);

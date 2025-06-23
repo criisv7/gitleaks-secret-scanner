@@ -4,7 +4,7 @@ const fs = require('fs');
 // Fallback package information
 const fallbackPackageInfo = {
   name: 'gitleaks-secret-scanner',
-  version: '1.0.2',
+  version: '1.0.0',
   repository: { url: 'https://github.com/criisv7/gitleaks-secret-scanner' }
 };
 
@@ -12,11 +12,9 @@ let packageInfo = fallbackPackageInfo;
 
 try {
   const packagePath = path.join(__dirname, '..', 'package.json');
-  console.log('Looking for package.json at:', packagePath);
   
   if (fs.existsSync(packagePath)) {
     packageInfo = require(packagePath);
-    console.log('Loaded package info:', packageInfo.name, packageInfo.version);
   } else {
     console.warn('⚠️ package.json not found, using fallback info');
   }
@@ -27,17 +25,15 @@ try {
 module.exports.showAttribution = () => {
   console.log(`
   =======================================================
-  ${packageInfo.name} v${packageInfo.version}
   Automated Gitleaks installer with custom rule support
-  
   Uses Gitleaks (https://github.com/gitleaks/gitleaks)
-  Created by Zachary Rice and contributors
   Licensed under MIT: https://github.com/gitleaks/gitleaks/blob/master/LICENSE
   =======================================================
   `);
 };
 
-module.exports.disclaimer = `
+module.exports.disclaimer = ()=>{
+  console.log(`
   DISCLAIMER:
   This package is not officially affiliated with, endorsed by,
   or supported by the Gitleaks project or its maintainers.
@@ -47,4 +43,8 @@ module.exports.disclaimer = `
   2. Verify GitHub API access isn't blocked
   3. Try setting version in .gitleaksrc
   4. Report issues at ${packageInfo.repository?.url || 'https://github.com/criisv7/gitleaks-secret-scanner/issues'}
-`;
+  5. HTML reports: Ensure output directory exists
+`);
+};
+module.exports.version = ()=>{
+  console.log(`Loaded package info:${packageInfo.name}, ${packageInfo.version}`)};

@@ -5,10 +5,12 @@ const https = require('https');
 const tar = require('tar');
 const unzipper = require('unzipper').Open;
 const axios = require('axios');
+let debugMode = false;
 
-// Debugging: Show environment information
-console.log('Platform:', os.platform());
-console.log('Architecture:', os.arch());
+module.exports.setDebug = (debug) => {
+  debugMode = debug;
+};
+
 
 // Safe package info loading
 let packageInfo = { 
@@ -19,11 +21,9 @@ let packageInfo = {
 
 try {
   const packagePath = path.join(__dirname, '..', 'package.json');
-  console.log('Looking for package.json at:', packagePath);
   
   if (fs.existsSync(packagePath)) {
     packageInfo = require(packagePath);
-    console.log('Loaded package info:', packageInfo.name, packageInfo.version);
   } else {
     console.warn('⚠️ package.json not found, using fallback info');
   }
@@ -157,7 +157,9 @@ async function downloadAndExtract(url, targetDir) {
     const headers = {
       'User-Agent': `${packageInfo.name}/${packageInfo.version}`
     };
-
+ if (debugMode) {
+      console.log('[DEBUG] Starting download from:', url);
+    }
     https.get(url, { headers }, response => {
       console.log('Response status:', response.statusCode);
       

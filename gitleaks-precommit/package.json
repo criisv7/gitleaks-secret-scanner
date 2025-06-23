@@ -1,13 +1,13 @@
 {
   "name": "gitleaks-secret-scanner",
-  "version": "1.0.2",
+  "version": "1.0.0",
   "main": "bin/cli.js",
   "scripts": {
-    "postinstall": "node bin/cli.js --install-only"
+    "postinstall": "node bin/set-permissions.js && node bin/cli.js --install-only"
   },
   "description": "Auto-installing Gitleaks with custom TOML rule support for pre-commit secret scanning",
   "bin": {
-    "gitleaks-precommit": "./bin/cli.js"
+    "gitleaks-secret-scanner": "./bin/cli.js"
   },
   "dependencies": {
     "axios": "^1.7.2",
