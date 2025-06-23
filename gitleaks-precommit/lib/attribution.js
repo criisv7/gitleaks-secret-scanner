@@ -18,12 +18,31 @@ try {
 }
 
 module.exports.showAttribution = () => {
+  const repoUrl = packageInfo.repository?.url?.replace('git+', '').replace('.git', '') || 'https://github.com/criisv7/gitleaks-secret-scanner';
+
   console.log(`
-  =======================================================
-  gitleaks-secret-scanner v${packageInfo.version}
-  This is a wrapper around the powerful Gitleaks engine.
-  Gitleaks: https://github.com/gitleaks/gitleaks
-  =======================================================
+  =======================================================================
+
+  gitleaks-secret-scanner v${packageInfo.version} (MIT License)
+  This project's repository: ${repoUrl}
+  Author:      Vijay Kumar
+  License:     MIT License
+  This tool is a command-line wrapper designed to simplify the installation
+  and cross-platform use of the powerful Gitleaks engine.
+
+  -----------------------------------------------------------------------
+
+  This package bundles and executes the Gitleaks binary, which is a
+  product of Zachary Rice and is licensed separately.
+
+  Core Engine: Gitleaks (https://github.com/gitleaks/gitleaks)
+  Author:      Zachary Rice
+  License:     MIT License
+
+  This wrapper is not officially affiliated with, endorsed by, or supported
+  by the original Gitleaks project or its maintainers.
+
+  =======================================================================
   `);
 };
 
