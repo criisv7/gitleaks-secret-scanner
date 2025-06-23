@@ -28,7 +28,6 @@ module.exports.runScan = (binaryPath, config) => {
       return reject(new Error('Gitleaks binary missing'));
     }
 
-    // --- Reporting Logic ---
     let targetReport = null;
     let tempJsonPath = null;
     if (config.reportFormat) {
@@ -50,34 +49,27 @@ module.exports.runScan = (binaryPath, config) => {
     if (config.additionalArgs) detectArgs.push(...config.additionalArgs);
     if (config.debug) { detectArgs.push('--log-level', 'debug'); } else { detectArgs.push('-v'); }
     if (config.debug) { console.log('[DEBUG] Target report config:', targetReport); }
-
-
     let diffCommand;
     switch (config.diffMode) {
       case 'all':
         diffCommand = ['diff', 'HEAD'];
         break;
       case 'ci':
-        const baseSha = process.env.CI_MERGE_REQUEST_DIFF_BASE_SHA;
-        const currentSha = process.env.CI_COMMIT_SHA;
+        const baseSha = process.env.BASE_SHA;
+        const headSha = process.env.HEAD_SHA;
 
-        if (!baseSha || !currentSha) {
+        if (!baseSha || !headSha) {
           return reject(new Error(
-            'For --diff-mode ci, the environment variables CI_MERGE_REQUEST_DIFF_BASE_SHA and CI_COMMIT_SHA must be set. This mode is designed for GitLab CI merge request pipelines.'
+            'For --diff-mode ci, the environment variables BASE_SHA and HEAD_SHA must be set. Please refer to the documentation for CI setup.'
           ));
         }
         
-        // The '..' syntax compares the tips of the two commits.
-        diffCommand = ['diff', `${baseSha}..${currentSha}`];
+        diffCommand = ['diff', `${baseSha}..${headSha}`];
         break;
       case 'staged':
       default:
         diffCommand = ['diff', '--cached'];
         break;
-    }
-
-    if (config.debug) {
-        console.log(`[DEBUG] Using git diff command: git ${diffCommand.join(' ')}`);
     }
 
     const gitDiff = spawn('git', diffCommand);
@@ -101,7 +93,6 @@ module.exports.runScan = (binaryPath, config) => {
           } else if (code === 1) {
             if (targetReport.format === 'html' && tempJsonPath) {
               generateHtmlReport(tempJsonPath, targetReport.path);
-              console.log(`✅ HTML report generated from findings: ${targetReport.path}`);
             } else {
               console.log(`✅ ${targetReport.format.toUpperCase()} report generated with findings: ${targetReport.path}`);
             }

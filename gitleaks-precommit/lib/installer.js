@@ -5,11 +5,6 @@ const https = require('https');
 const tar = require('tar');
 const unzipper = require('unzipper').Open;
 const axios = require('axios');
-let debugMode = false;
-
-module.exports.setDebug = (debug) => {
-  debugMode = debug;
-};
 
 let packageInfo = { 
   name: 'gitleaks-secret-scanner', 
@@ -40,14 +35,13 @@ module.exports.installGitleaks = async (config) => {
   const arch = os.arch();
   const binaryName = platform === 'win32' ? 'gitleaks.exe' : 'gitleaks';
 
-  let version = config.version || '8.18.2'; // Using a stable, well-known version as fallback
+  let version = config.version || '8.27.2';
   console.log('Using Gitleaks version:', version);
   
   const versionDir = path.join(CACHE_DIR, `v${version}`);
   const binaryPath = path.join(versionDir, binaryName);
 
   if (fs.existsSync(binaryPath)) {
-    console.log('Using cached binary:', binaryPath);
     return binaryPath;
   }
 
@@ -78,54 +72,28 @@ module.exports.installGitleaks = async (config) => {
   }
 };
 
-// *** THE ONLY MODIFIED FUNCTION ***
 function getFileName(version, platform, arch) {
   let osName, archName;
 
   switch (platform) {
-    case 'darwin':
-      osName = 'darwin';
-      break;
-    case 'linux':
-      osName = 'linux';
-      break;
-    case 'win32':
-      osName = 'windows';
-      break;
-    default:
-      throw new Error(`Unsupported platform: ${platform}`);
+    case 'darwin': osName = 'darwin'; break;
+    case 'linux': osName = 'linux'; break;
+    case 'win32': osName = 'windows'; break;
+    default: throw new Error(`Unsupported platform: ${platform}`);
   }
 
-  // More comprehensive architecture mapping
   switch (arch) {
-    case 'x64':
-      // Gitleaks v8 uses 'x64' for Darwin/Linux and 'amd64' for older Windows,
-      // but 'x64' is the most common for recent releases across all OS.
-      archName = 'x64';
-      break;
-    case 'arm64':
-      archName = 'arm64';
-      break;
+    case 'x64': archName = 'x64'; break;
+    case 'arm64': archName = 'arm64'; break;
     case 'arm':
-      // Node.js 'arm' can map to different ARM versions.
-      // We default to armv7 as it's a common baseline.
-      // Some systems might need more specific detection.
       archName = 'armv7';
-      console.warn(`⚠️ Detected 'arm' architecture. Assuming 'armv7'. If this fails, your system may require a different ARM version (e.g., armv6).`);
+      console.warn(`⚠️ Detected 'arm' architecture. Assuming 'armv7'.`);
       break;
     case 'ia32':
-      // Node.js 'ia32' (32-bit) maps to Gitleaks 'x32' for Linux or 'x86' for older Windows.
-      // For Linux, it's 'x32'.
-      if (osName === 'linux') {
-        archName = 'x32';
-      } else {
-        // Fallback for Windows 32-bit (though less common now)
-        archName = 'x86'; 
-      }
+      archName = (osName === 'linux') ? 'x32' : 'x86';
       break;
     default:
-      // If the architecture is not explicitly handled, we throw an error.
-      throw new Error(`Unsupported architecture: ${arch}. Please check Gitleaks releases for a compatible binary.`);
+      throw new Error(`Unsupported architecture: ${arch}.`);
   }
 
   const ext = (osName === 'windows') ? 'zip' : 'tar.gz';
@@ -135,16 +103,12 @@ function getFileName(version, platform, arch) {
   return fileName;
 }
 
-
 async function downloadAndExtract(url, targetDir) {
   return new Promise((resolve, reject) => {
     console.log('Starting download...');
     const headers = {
       'User-Agent': `${packageInfo.name}/${packageInfo.version}`
     };
-    if (debugMode) {
-      console.log('[DEBUG] Starting download from:', url);
-    }
 
     const request = https.get(url, { headers }, response => {
       if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
@@ -152,16 +116,13 @@ async function downloadAndExtract(url, targetDir) {
         downloadAndExtract(response.headers.location, targetDir).then(resolve).catch(reject);
         return;
       }
-
       if (response.statusCode !== 200) {
         response.resume();
         return reject(new Error(`Download failed with status code: ${response.statusCode}`));
       }
-
       const extractor = url.endsWith('.zip')
         ? unzipper.Extract({ path: targetDir })
         : tar.x({ C: targetDir });
-
       response.pipe(extractor)
         .on('finish', () => { 
           console.log('Extraction complete');
@@ -171,7 +132,6 @@ async function downloadAndExtract(url, targetDir) {
           reject(new Error(`Extraction failed: ${err.message}`));
         });
     });
-
     request.on('error', (err) => {
       reject(new Error(`Download request failed: ${err.message}`));
     });

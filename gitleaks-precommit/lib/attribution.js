@@ -1,7 +1,6 @@
 const path = require('path');
 const fs = require('fs');
 
-// Fallback package information
 const fallbackPackageInfo = {
   name: 'gitleaks-secret-scanner',
   version: '1.0.0',
@@ -12,48 +11,48 @@ let packageInfo = fallbackPackageInfo;
 
 try {
   const packagePath = path.join(__dirname, '..', 'package.json');
-  
   if (fs.existsSync(packagePath)) {
     packageInfo = require(packagePath);
-  } else {
-    console.warn('⚠️ package.json not found, using fallback info');
   }
 } catch (e) {
-  console.warn('⚠️ Error loading package.json:', e.message);
 }
 
 module.exports.showAttribution = () => {
   console.log(`
   =======================================================
-  Automated Gitleaks installer with custom rule support
-  Uses Gitleaks (https://github.com/gitleaks/gitleaks)
-  Licensed under MIT: https://github.com/gitleaks/gitleaks/blob/master/LICENSE
+  gitleaks-secret-scanner v${packageInfo.version}
+  This is a wrapper around the powerful Gitleaks engine.
+  Gitleaks: https://github.com/gitleaks/gitleaks
   =======================================================
   `);
 };
 
-module.exports.disclaimer = ()=>{
-  console.log(`
-  DISCLAIMER:
-  This package is not officially affiliated with, endorsed by,
-  or supported by the Gitleaks project or its maintainers.
-  
-  Troubleshooting:
-  1. Check your internet connection
-  2. Verify GitHub API access isn't blocked
-  3. Try setting version in .gitleaksrc
-  4. Report issues at ${packageInfo.repository?.url || 'https://github.com/criisv7/gitleaks-secret-scanner/issues'}
-  5. HTML reports: Ensure output directory exists
-`);
-};
 module.exports.version = ()=>{
-  console.log(`Loaded package info:${packageInfo.name}, ${packageInfo.version}`)};
+  console.log(`${packageInfo.name} v${packageInfo.version}`);
+};
 
 module.exports.options = ()=>{
 console.log(`
-Options:
-  --diff-mode <mode>   Set scan scope [staged|all] (default: staged)
-  --html-report <path> Generate HTML report
-  --debug              Enable debug output
-  --install-only       Skip scanning
+Usage: gitleaks-secret-scanner [options]
+
+Core Commands:
+  --init                Creates a default .gitleaks.toml configuration file.
+  --install-only        Downloads the Gitleaks binary without running a scan.
+
+Scanning Options:
+  --diff-mode <mode>    Sets the scope of the scan.
+                        Modes: staged (default), all, ci.
+  --config <path>       Path to a custom Gitleaks config file.
+
+Reporting Options:
+  --html-report [path]  Generate a user-friendly HTML report.
+                        Defaults to 'gitleaks-report.html' if no path is given.
+  --report-format <fmt> Generate a standard Gitleaks report.
+                        Formats: json, csv, sarif, junit.
+  --report-path <path>  Path for the standard Gitleaks report.
+
+Other Options:
+  --version             Show the version of this package.
+  --about               Display attribution information.
+  --options, --help     Show this help message.
 `);};

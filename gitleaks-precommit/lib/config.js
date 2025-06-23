@@ -10,7 +10,6 @@ module.exports.loadConfig = async () => {
     reportFormat: null,
     reportPath: null,
     diffMode: 'staged', 
-    debug: false,
     additionalArgs: [] 
   };
 
@@ -30,7 +29,6 @@ module.exports.loadConfig = async () => {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     const val = args[i + 1];
-
     const isFlagWithValue = (v) => v && !v.startsWith('--');
 
     switch (arg) {
@@ -39,7 +37,7 @@ module.exports.loadConfig = async () => {
           config.htmlReport = val;
           i++; 
         } else {
-          config.htmlReport = 'gitleaks-report.html'; // Set the default path
+          config.htmlReport = 'gitleaks-report.html';
         }
         break;
       case '--report-format':
@@ -56,9 +54,6 @@ module.exports.loadConfig = async () => {
         if (isFlagWithValue(val)) { config.diffMode = val; i++; }
         else { console.warn('⚠️ --diff-mode flag requires a mode (staged/all/ci).'); }
         break;
-      case '--debug':
-        config.debug = true;
-        break;
       default:
         remainingArgs.push(arg);
         break;
@@ -73,7 +68,6 @@ module.exports.loadConfig = async () => {
     config.diffMode = 'staged';
   }
 
-  // Auto-detect .gitleaks.toml config
   const tomlPaths = ['.gitleaks.toml', 'gitleaks.toml', '.gitleaks/config.toml'];
   for (const tomlPath of tomlPaths) {
     const fullPath = path.join(process.cwd(), tomlPath);
