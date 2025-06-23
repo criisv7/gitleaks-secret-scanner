@@ -118,54 +118,6 @@ secret_detection_mr:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
 ```
 
-### GitHub Actions Example
-
-```yaml
-# .github/workflows/secret-scan.yml
-name: Secret Detection Scan
-on:
-  pull_request:
-    branches: [ main, master ]
-jobs:
-  scan-secrets:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Important: Fetches full history for diffing
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-
-      - name: Install Scanner
-        run: npm install -g gitleaks-secret-scanner
-
-      - name: Scan for secrets
-        continue-on-error: true # Allows artifact upload even if secrets are found
-        id: scan
-        env:
-          # Set the required environment variables for the scanner
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: gitleaks-secret-scanner --diff-mode ci --html-report scan-report.html
-
-      - name: Upload Report
-        if: always() # Ensures this step runs even if the scan fails
-        uses: actions/upload-artifact@v4
-        with:
-          name: gitleaks-scan-report
-          path: scan-report.html
-      
-      - name: Fail job on findings
-        if: steps.scan.outcome == 'failure'
-        run: |
-          echo "❌ Secrets were detected. See the 'gitleaks-scan-report' artifact for details."
-          exit 1
-```
-
 ## License and Attribution
 
 This package is licensed under the MIT License.
