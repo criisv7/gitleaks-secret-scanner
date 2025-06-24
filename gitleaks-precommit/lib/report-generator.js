@@ -1,261 +1,130 @@
 const fs = require("fs");
 const path = require("path");
 
-const HTML_TEMPLATE = (reportData) => `<!DOCTYPE html>
+const { version } = require("../package.json");
+
+module.exports.generateHtmlReport = (leaksArray, htmlPath) => {
+  try {
+    const leaks = leaksArray || [];
+
+    function escapeHtml(unsafe) {
+      if (!unsafe) return "";
+      return unsafe
+        .toString()
+        .replace(/&/g, "&")
+        .replace(/</g, "<")
+        .replace(/>/g, ">")
+        .replace(/"/g, '"')
+        .replace(/'/g, "'");
+    }
+
+    const HTML_TEMPLATE = (reportData) => `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gitleaks Security Report</title>
   <style>
-    :root {
-      --primary: #2c3e50;
-      --danger: #e74c3c;
-      --warning: #f39c12;
-      --success: #27ae60;
-      --light: #ecf0f1;
-      --dark: #34495e;
-    }
-    
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-    }
-    
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f5f7fa;
-      padding: 20px;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      background: white;
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-      overflow: hidden;
-    }
-    
-    header {
-      background: var(--primary);
-      color: white;
-      padding: 30px 40px;
-      text-align: center;
-    }
-    
-    h1 {
-      font-size: 2.5rem;
-      margin-bottom: 10px;
-    }
-    
-    .summary {
-      display: flex;
-      justify-content: space-around;
-      padding: 20px;
-      background: var(--light);
-      border-bottom: 1px solid #ddd;
-    }
-    
-    .summary-item {
-      text-align: center;
-      padding: 15px;
-    }
-    
-    .summary-item h3 {
-      font-size: 2rem;
-      color: var(--primary);
-    }
-    
-    .leak-count {
-      font-size: 3rem;
-      font-weight: bold;
-      color: ${
-        reportData.leaks.length > 0 ? "var(--danger)" : "var(--success)"
-      };
-    }
-    
-    .scan-info {
-      padding: 15px 30px;
-      background: #f8f9fa;
-      border-bottom: 1px solid #eee;
-      display: flex;
-      justify-content: space-between;
-    }
-    
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    
-    thead {
-      background: var(--dark);
-      color: white;
-    }
-    
-    th, td {
-      padding: 12px 15px;
-      text-align: left;
-      border-bottom: 1px solid #ddd;
-    }
-    
-    tbody tr:nth-child(even) {
-      background-color: #f8f9fa;
-    }
-    
-    tbody tr:hover {
-      background-color: #e9f7fe;
-    }
-    
-    .leak-severity-high {
-      color: var(--danger);
-      font-weight: bold;
-    }
-    
-    .secret-preview {
-      font-family: monospace;
-      background: #f8f8f8;
-      padding: 2px 5px;
-      border-radius: 3px;
-      max-width: 200px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    footer {
-      text-align: center;
-      padding: 20px;
-      color: #7f8c8d;
-      font-size: 0.9rem;
-      border-top: 1px solid #eee;
-    }
-    
-    .no-leaks {
-      text-align: center;
-      padding: 40px;
-      color: var(--success);
-      font-size: 1.2rem;
-    }
+    :root { --primary: #2c3e50; --danger: #e74c3c; --success: #27ae60; --light: #ecf0f1; --dark: #34495e; --border-color: #e1e4e8; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f6f8fa; padding: 20px; }
+    .container { max-width: 1600px; margin: 0 auto; background: white; border-radius: 10px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); overflow: hidden; }
+    header { background: var(--primary); color: white; padding: 25px 40px; text-align: center; border-bottom: 5px solid var(--danger); }
+    h1 { font-size: 2.2rem; margin: 0; }
+    .summary { display: flex; justify-content: space-around; padding: 20px; background: var(--light); border-bottom: 1px solid var(--border-color); }
+    .summary-item { text-align: center; }
+    h3 { font-size: 1.5rem; color: var(--primary); margin: 0; margin-bottom: 5px; }
+    .summary-item div { font-size: 1.8rem; font-weight: bold; color: var(--dark); }
+    .leak-count { font-size: 2.5rem; font-weight: bold; color: ${
+      reportData.leaks.length > 0 ? "var(--danger)" : "var(--success)"
+    }; }
+    .scan-info { padding: 10px 30px; background: #f1f1f1; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 0.9em; color: #666; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { background: var(--dark); color: white; }
+    th, td { padding: 12px 15px; text-align: left; border-bottom: 1px solid var(--border-color); vertical-align: top; }
+    tbody tr:hover { background-color: #f1f8ff; }
+    .leak-description { max-width: 400px; white-space: normal; word-break: break-word; font-size: 0.95em; }
+    .rule-badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 0.85em; font-weight: 600; background-color: var(--light); color: var(--dark); border: 1px solid #ccc; }
+    .no-leaks { text-align: center; padding: 40px; color: var(--success); font-size: 1.2rem; }
+    footer { text-align: center; padding: 20px; color: #7f8c8d; font-size: 0.9rem; border-top: 1px solid var(--border-color); }
   </style>
 </head>
 <body>
   <div class="container">
-    <header>
-      <h1>Gitleaks Security Report</h1>
-      <p>Automated secrets detection report</p>
-    </header>
-    
+    <header><h1>Gitleaks Security Report</h1><p>Automated secrets detection report</p></header>
     <div class="summary">
-      <div class="summary-item">
-        <h3>Total Leaks</h3>
-        <div class="leak-count">${reportData.leaks.length}</div>
-      </div>
-      <div class="summary-item">
-        <h3>Files Scanned</h3>
-        <div>${reportData.filesScanned || "N/A"}</div>
-      </div>
-      <div class="summary-item">
-        <h3>Scan Time</h3>
-        <div>${reportData.scanTime || "N/A"}</div>
-      </div>
+      <div class="summary-item"><h3>Total Leaks</h3><div class="leak-count">${
+        reportData.leaks.length
+      }</div></div>
+      <div class="summary-item"><h3>Files Scanned</h3><div>${
+        reportData.filesScanned
+      }</div></div>
+      <div class="summary-item"><h3>Scan Time</h3><div>${
+        reportData.scanTime
+      }</div></div>
     </div>
-    
     <div class="scan-info">
-      <div>
-        <strong>Scan Date:</strong> ${new Date().toLocaleString()}
-      </div>
-      <div>
-        <strong>Version:</strong> ${reportData.version || "N/A"}
-      </div>
+      <div><strong>Scan Date:</strong> ${reportData.scanDate}</div>
+      <div><strong>Gitleaks Version:</strong> ${
+        reportData.gitleaksVersion
+      }</div>
     </div>
-    
     ${
       reportData.leaks.length > 0
-        ? `
-    <table>
-      <thead>
-        <tr>
-          <th>File</th>
-          <th>Line</th>
-          <th>Secret Type</th>
-          <th>Rule ID</th>
-          <th>Secret Preview</th>
-        </tr>
-      </thead>
-      <tbody>
-        ${reportData.leaks
-          .map(
-            (leak) => `
-        <tr>
-          <td>${escapeHtml(leak.File)}</td>
-          <td>${leak.StartLine}</td>
-          <td class="leak-severity-high">${escapeHtml(leak.RuleID)}</td>
-          <td>${escapeHtml(leak.Description || leak.RuleID)}</td>
-          <td><span class="secret-preview">${escapeHtml(
-            leak.Secret
-          )}</span></td>
-        </tr>
-        `
-          )
-          .join("")}
-      </tbody>
-    </table>
-    `
-        : `
-    <div class="no-leaks">
-      ✅ No secrets detected in scanned files
-    </div>
-    `
+        ? `<table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Line</th>
+                <th>Secret Type</th>
+                <th>Description</th>
+                <th>Author</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${reportData.leaks
+                .map(
+                  (leak) => `<tr>
+                <td>${escapeHtml(leak.File)}</td>
+                <td>${leak.StartLine}</td>
+                <td><span class="rule-badge">${escapeHtml(
+                  leak.RuleID
+                )}</span></td>
+                <td class="leak-description">${escapeHtml(
+                  leak.Description
+                )}</td>
+                <td>${leak.Author ? escapeHtml(leak.Author) : "N/A"}</td>
+                <td>${
+                  leak.Date ? new Date(leak.Date).toLocaleString() : "N/A"
+                }</td>
+              </tr>`
+                )
+                .join("")}
+            </tbody>
+          </table>`
+        : `<div class="no-leaks">✅ No secrets detected in scanned files</div>`
     }
-    
-    <footer>
-      Generated by gitleaks-secret-scanner v${reportData.packageVersion} | 
-      ${reportData.leaks.length} potential secrets detected
-    </footer>
+    <footer>Generated by gitleaks-secret-scanner v${
+      reportData.packageVersion
+    } | ${reportData.leaks.length} potential secrets detected</footer>
   </div>
 </body>
 </html>`;
 
-function escapeHtml(unsafe) {
-  if (!unsafe) return "";
-  return unsafe
-    .toString()
-    .replace(/&/g, "&")
-    .replace(/</g, "<")
-    .replace(/>/g, ">")
-    .replace(/"/g, `"`)
-    .replace(/'/g, "'");
-}
-
-module.exports.generateHtmlReport = (jsonPath, htmlPath) => {
-  try {
-    let leaks = [];
-    if (jsonPath && fs.existsSync(jsonPath)) {
-      const jsonData = fs.readFileSync(jsonPath, "utf8");
-      if (jsonData) {
-        leaks = JSON.parse(jsonData);
-      }
-    }
-
     const reportData = {
-      leaks,
-      filesScanned: leaks.length ? new Set(leaks.map((l) => l.File)).size : 0,
+      leaks: leaks,
+      filesScanned: new Set(leaks.map((l) => l.File)).size,
+      scanDate: new Date().toLocaleString(),
       scanTime: new Date().toLocaleTimeString(),
-      packageVersion: require("../package.json").version,
-      version: "8.x",
+      gitleaksVersion: "8.27.2",
+      packageVersion: version,
     };
 
     const htmlContent = HTML_TEMPLATE(reportData);
-
     const outputDir = path.dirname(htmlPath);
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
-
     fs.writeFileSync(htmlPath, htmlContent);
   } catch (error) {
     throw new Error(`HTML report generation failed: ${error.message}`);
