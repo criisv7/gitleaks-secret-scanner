@@ -144,7 +144,7 @@ jobs:
 
       # Step 3: Install your secret scanner from npm
       - name: 'Install gitleaks-secret-scanner'
-        run: npm install -g ./gitleaks-secret-scanner-1.0.0.tgz
+        run: npm install -g gitleaks-secret-scanner
 
       # Step 4: Run the scan using 'ci' mode
       # continue-on-error: true ensures that the workflow doesn't stop here,
