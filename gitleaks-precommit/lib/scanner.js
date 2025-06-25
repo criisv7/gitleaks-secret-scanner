@@ -137,53 +137,83 @@ async function runCiScan(binaryPath, config) {
 }
 
 async function runAllUncommittedScan(binaryPath, config) {
-  console.log("Scanning all uncommitted changes...");
+  console.log(
+    "Scanning all uncommitted changes (staged, unstaged, and untracked)..."
+  );
+
+  // Part 1: Get rich report for staged changes. This is unchanged.
   const stagedLeaks = await runStagedScan(binaryPath, config, true);
 
-  let unstagedLeaks = [];
+  // Part 2 & 3: Scan both unstaged AND untracked files.
+  let otherLeaks = [];
+
+  // Get all files that are modified but NOT staged.
   const unstagedFiles = execSync("git diff --name-only")
     .toString()
     .trim()
     .split("\n")
     .filter(Boolean);
-  if (unstagedFiles.length > 0) {
+
+  // Get all brand new files that are not staged and not in .gitignore.
+  const untrackedFiles = execSync("git ls-files --others --exclude-standard")
+    .toString()
+    .trim()
+    .split("\n")
+    .filter(Boolean);
+
+  const filesToScan = [...new Set([...unstagedFiles, ...untrackedFiles])];
+
+  if (filesToScan.length > 0) {
     let tempDir;
     try {
-      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitleaks-unstaged-"));
-      for (const file of unstagedFiles) {
+      console.log(
+        `Scanning ${filesToScan.length} unstaged/untracked file(s)...`
+      );
+      tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "gitleaks-uncommitted-"));
+      for (const file of filesToScan) {
         const sourcePath = path.join(process.cwd(), file);
+        // We check for existence because a file could have been deleted (unstaged deletion).
         if (fs.existsSync(sourcePath) && fs.lstatSync(sourcePath).isFile()) {
           const tempFilePath = path.join(tempDir, file);
           fs.mkdirSync(path.dirname(tempFilePath), { recursive: true });
           fs.copyFileSync(sourcePath, tempFilePath);
         }
       }
-      const args = ["detect", "--source", tempDir, "--no-git"];
-      const rawLeaks = await executeGitleaks(binaryPath, args, config);
-      unstagedLeaks = rawLeaks.map((leak) => {
-        const originalPath = leak.File;
-        const relativePath = path
-          .relative(tempDir, originalPath)
-          .replace(/\\/g, "/");
-        leak.File = relativePath;
-        leak.Fingerprint = leak.Fingerprint.replace(originalPath, relativePath);
-        return leak;
-      });
+
+      // Only run the scan if the temp directory is not empty
+      if (fs.readdirSync(tempDir).length > 0) {
+        const args = ["detect", "--source", tempDir, "--no-git"];
+        const rawLeaks = await executeGitleaks(binaryPath, args, config);
+
+        // Clean up the paths to be relative to the project root.
+        otherLeaks = rawLeaks.map((leak) => {
+          const originalPath = leak.File;
+          const relativePath = path
+            .relative(tempDir, originalPath)
+            .replace(/\\/g, "/");
+          leak.File = relativePath;
+          leak.Fingerprint = leak.Fingerprint.replace(
+            originalPath,
+            relativePath
+          );
+          return leak;
+        });
+      }
     } finally {
       if (tempDir) fs.rmSync(tempDir, { recursive: true, force: true });
     }
   }
 
+  // Combine and de-duplicate the results.
   const allLeaks = [...stagedLeaks];
   const stagedFingerprints = new Set(stagedLeaks.map((l) => l.Fingerprint));
-  for (const leak of unstagedLeaks) {
+  for (const leak of otherLeaks) {
     if (!stagedFingerprints.has(leak.Fingerprint)) {
       allLeaks.push(leak);
     }
   }
   return allLeaks;
 }
-
 async function runStagedScan(binaryPath, config, silent = false) {
   const stagedFiles = execSync("git diff --cached --name-only")
     .toString()
