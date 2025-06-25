@@ -1,0 +1,7 @@
+# .npmignore
+__tests__/
+*.log
+
+# Exclude local editor and OS files
+.DS_Store
+.vscode/
