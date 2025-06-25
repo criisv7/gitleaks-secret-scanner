@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const fallbackPackageInfo = {
   name: "gitleaks-secret-scanner",
-  version: "1.0.0",
+  version: "1.1.1",
   repository: { url: "https://github.com/criisv7/gitleaks-secret-scanner" },
 };
 
