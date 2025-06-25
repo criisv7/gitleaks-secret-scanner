@@ -37,6 +37,8 @@ Scanning staged files correctly is a complex problem. This tool solves it using 
 -   It uses low-level Git plumbing commands to create a temporary, in-memory commit object.
 -   This allows Gitleaks to generate a **full, rich report with commit data** for your staged code.
 -   It **never** changes your branch history, your staging area, or your working directory, making it 100% safe for automated hooks.
+-   For staged changes (staged mode): It uses a safe "Virtual Commit" strategy with low-level Git commands to create a temporary, in-memory commit. This provides a full, rich report with commit data without ever changing your branch history, staging area, or working directory.
+-   For all changes (all mode): It performs a comprehensive three-part scan that covers staged, unstaged, and new untracked files, ensuring no secret can be missed. This is a critical fix that makes it more reliable than standard git diff HEAD scans.
 
 ### 📄 5. User-Friendly HTML Reports
 Gitleaks produces JSON, but this wrapper provides clean, user-friendly HTML reports out-of-the-box—perfect for quick reviews by developers or security teams. The reports are populated with the rich data captured by the advanced scanning methods.
@@ -158,9 +160,9 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: gitleaks-secret-scanner --diff-mode ci --report-format json
 
-      # Step 5: Upload the HTML report as a workflow artifact
+      # Step 5: Upload the Json report as a workflow artifact
       # if: always() ensures this step runs even if the previous step failed.
-      - name: 'Upload HTML report artifact'
+      - name: 'Upload Json report artifact'
         if: always()
         uses: actions/upload-artifact@v4
         with:
