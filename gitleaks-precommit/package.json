@@ -1,7 +1,7 @@
 {
   "name": "gitleaks-secret-scanner",
   "version": "1.0.0",
-  "description": "Auto-installing Gitleaks with custom TOML rule support for pre-commit secret scanning",
+  "description": "A powerful, intelligent wrapper for the Gitleaks engine that provides accurate and safe secret scanning for local pre-commit hooks and CI/CD pipelines.",
   "author": "Vijay Kumar",
   "main": "bin/cli.js",
   "bin": {
