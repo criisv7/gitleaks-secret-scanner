@@ -64,9 +64,13 @@ options below or pass any valid Gitleaks flag directly.
                         'staged': (default) Scans only staged files for pre-commit hooks.
                         'all': Scans all uncommitted changes (staged and unstaged).
                         'ci': Scans a pull request commit range (requires CI variables).
+                        'history': Scans the entire repository history.
 
   --html-report [path]  Generates a rich, user-friendly HTML report.
                         Defaults to 'gitleaks-report.html' if no path is given.
+
+  --depth <number>      Used with '--diff-mode history' to limit the scan
+                        to the last <number> of commits.
 
 --- Common Gitleaks Flags (Passed Directly to the Engine) ---
 

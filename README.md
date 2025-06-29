@@ -4,182 +4,166 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Downloads](https://img.shields.io/npm/dm/gitleaks-secret-scanner.svg)](https://www.npmjs.com/package/gitleaks-secret-scanner)
 
-A powerful, zero-configuration wrapper for the [Gitleaks](https://github.com/gitleaks/gitleaks) engine.
+A powerful, intelligent, and safe wrapper for the [Gitleaks](https://github.com/gitleaks/gitleaks) engine.
 
 This tool solves the main challenge of using Gitleaks in a team environment: the setup. It automatically downloads the correct Gitleaks binary for any operating system and architecture, making it incredibly easy to scan for secrets in local pre-commit hooks and CI/CD pipelines without manual intervention.
 
-## Why Use This Package? The NPM Advantage
+## Why Use This Package?
 
-While Gitleaks is a phenomenal tool, integrating it into a Node.js project can be cumbersome. This package provides a seamless bridge, offering several key advantages:
+While Gitleaks is a phenomenal tool, this package provides a seamless bridge to the Node.js ecosystem, offering several key advantages that go beyond a simple wrapper.
 
 ### 🚀 1. Effortless, Zero-Configuration Setup
-The biggest advantage. You no longer need to manually download Gitleaks binaries or write complex scripts to manage different versions for macOS, Windows, and various Linux developers on your team. This package handles everything automatically on `npm install`.
+The biggest advantage. You no longer need to manually download Gitleaks binaries or write complex scripts to manage different versions for macOS, Windows, and Linux developers on your team. This package handles everything automatically.
 
-```bash
-# That's it. The correct binary is now ready to use.
-npm install gitleaks-secret-scanner --save-dev
-```
-
-### 📦 2. Seamless Node.js Ecosystem Integration
-As an npm package, it integrates perfectly into your existing workflow.
--   **Version Locking:** Lock the scanner's version in your `package.json`, ensuring every developer and CI runner uses the exact same tool.
--   **NPM Scripts:** Easily add it to your `npm scripts` for consistent commands.
--   **Pre-commit Hooks:** The ideal tool for use with packages like **Husky** to scan staged files before they are committed.
-
-### 🤖 3. Truly Accurate and Robust CI/CD
-**This is not a simple `git diff | gitleaks` pipe.** Standard diff-based scanning is often inaccurate. This tool's `ci` mode is far more intelligent.
+### 🧠 2. Truly Accurate CI/CD Scanning
+This is not a simple `git diff | gitleaks` pipe. The `ci` mode is far more intelligent.
 -   **It correctly handles removed secrets.** The scan will pass if you remove a secret in a pull request.
 -   **It de-duplicates findings.** A secret that exists across multiple commits in a PR is only reported once.
--   **It scans only for newly added secrets.** This is achieved with a sophisticated **"scan-then-filter"** method that performs a rich Gitleaks scan and then cross-references the findings against the actual `diff` to ensure perfect accuracy.
+-   **It scans only for newly added secrets.** This is achieved with a sophisticated **"scan-then-filter"** method that ensures perfect accuracy.
 
-### 🔒 4. Safe and Powerful Pre-Commit Hooks
-Scanning staged files correctly is a complex problem. This tool solves it using a safe, non-invasive **"Virtual Commit"** strategy.
--   It uses low-level Git plumbing commands to create a temporary, in-memory commit object.
--   This allows Gitleaks to generate a **full, rich report with commit data** for your staged code.
--   It **never** changes your branch history, your staging area, or your working directory, making it 100% safe for automated hooks.
--   For staged changes (staged mode): It uses a safe "Virtual Commit" strategy with low-level Git commands to create a temporary, in-memory commit. This provides a full, rich report with commit data without ever changing your branch history, staging area, or working directory.
--   For all changes (all mode): It performs a comprehensive three-part scan that covers staged, unstaged, and new untracked files, ensuring no secret can be missed. This is a critical fix that makes it more reliable than standard git diff HEAD scans.
+### 🔒 3. Safe and Powerful Local Scanning
+This tool uses advanced, non-invasive strategies to scan your uncommitted work safely and effectively.
+-   **For staged changes (`staged` mode):** It uses a safe **"Virtual Commit"** strategy with low-level Git commands to create a temporary, in-memory commit. This provides a **full, rich report with commit data** without ever changing your branch history or staging area.
+-   **For all changes (`all` mode):** It performs a comprehensive three-part scan that covers **staged, unstaged, and new untracked files**, ensuring no secret can be missed.
 
-### 📄 5. User-Friendly HTML Reports
-Gitleaks produces JSON, but this wrapper provides clean, user-friendly HTML reports out-of-the-box—perfect for quick reviews by developers or security teams. The reports are populated with the rich data captured by the advanced scanning methods.
+### 📄 4. Rich, User-Friendly Reports
+The console output and generated HTML reports are populated with the rich contextual data captured by the advanced scanning methods, making it easy to find and fix issues quickly.
 
 ## Key Features
 
 -   **Auto-Installation:** Automatically downloads and caches the appropriate Gitleaks binary for your OS and architecture.
--   **Accurate CI/CD Mode:** Intelligently scans pull requests, reporting only on newly introduced secrets and de-duplicating findings.
--   **Advanced Staged Mode:** Uses a safe "Virtual Commit" method to provide rich reports for pre-commit hooks.
--   **Rich HTML Reports:** Generate a clean, comprehensive HTML report from scan results with full commit context.
--   **Standard Formats:** Can also generate standard Gitleaks formats (`json`, `csv`, `sarif`, etc.).
--   **Custom Rules:** Automatically detects and uses your local `.gitleaks.toml` configuration file.
--   **Professional CLI:** Correctly handles all the pass-through flags.
+-   **Full History Auditing:** A dedicated `--diff-mode history` for performing a complete scan of your entire repository.
+-   **Accurate CI/CD Mode:** Intelligently scans pull requests, reporting only on newly introduced secrets.
+-   **Advanced Local Scans:** Uses safe, non-invasive methods to provide rich reports for staged and uncommitted work.
+-   **Rich HTML Reports:** Generates a clean, comprehensive HTML report from scan results with full commit context.
+-   **Professional CLI:** Correctly handles pass-through flags like `--no-banner` and `--help`.
 
 ## Quick Start & Usage
 
 ### One-Off Scan with NPX
-
-The easiest way to run a scan without installation:
-
+The easiest way to try it out without installation:
 ```bash
-# Scan all of your uncommitted changes (staged and unstaged)
+# Scan all of your uncommitted changes (staged, unstaged, and new untracked files)
 npx gitleaks-secret-scanner --diff-mode all --html-report
 ```
 
 ### Project Installation (Recommended)
-
-For use in `npm scripts` or pre-commit hooks, install it as a development dependency.
-
+For use in `npm scripts` or with tools like Husky, install it as a development dependency.
 ```bash
 npm install gitleaks-secret-scanner --save-dev
 ```
-
-Then, add a script to your `package.json`:
+Then, add scripts to your `package.json`:
 ```json
 "scripts": {
   "scan:staged": "gitleaks-secret-scanner",
-  "scan:all": "gitleaks-secret-scanner --diff-mode all --html-report"
+  "scan:all": "gitleaks-secret-scanner --diff-mode all",
+  "scan:history": "gitleaks-secret-scanner --diff-mode history"
 }
 ```
-Now run it with `npm run scan:staged`.
 
 ## Command-Line Options
 
-This wrapper provides a simplified interface for common tasks, but also allows you to pass any flag directly to the Gitleaks engine.
-
 For a comprehensive menu showing both wrapper commands and the most common Gitleaks flags, run:
-```bash
-gitleaks-secret-scanner --options
-```
-For the complete, native help menu from the Gitleaks binary itself, run:
-```bash
-gitleaks-secret-scanner --help
-```
+`gitleaks-secret-scanner --options`
 
-| Flag                    | Alias | Description                                                                  |
-| ----------------------- | ----- | ---------------------------------------------------------------------------- |
-| `--init`                |       | Create a default `.gitleaks.toml` configuration file.                        |
-| `--install-only`        |       | Download the Gitleaks binary without running a scan.                         |
-| `--diff-mode <mode>`    |       | Set scan scope. Modes: `staged` (default), `all`, `ci`.                      |
-| `--config <path>`       |       | Path to a custom Gitleaks config file.                                       |
-| `--html-report [path]`  |       | Generate an HTML report. Defaults to `gitleaks-report.html`.                 |
-| `--report-format <fmt>` | `-f`  | Generate a standard report. Formats: `json`, `csv`, `sarif`, `junit`.        |
-| `--report-path <path>`  | `-r`  | Path for the standard report.                                                |
-| `--version`             |       | Show the package version.                                                    |
-| `--about`               |       | Display attribution information.                                             |
-| `--help`, `--options`   |       | Show this help message.                                                      |
+For the complete, native help menu from the Gitleaks binary itself, run:
+`gitleaks-secret-scanner --help`
+
+---
+*Wrapper-Specific Options:*
+| Flag | Description |
+| :--- | :--- |
+| `--diff-mode <mode>` | Sets the scan scope. Modes: `staged` (default), `all`, `ci`, `history`. |
+| `--html-report [path]` | Generates a user-friendly HTML report. Defaults to `gitleaks-report.html`. |
+| `--depth <number>` | Used with `--diff-mode history` to limit the scan to the last `<number>` of commits. |
+---
 
 ## CI/CD Integration Guide
 
-To scan only the changes in a Merge/Pull Request, use `--diff-mode ci`. This requires two environment variables to be set in your CI environment:
-
--   `BASE_SHA`: The commit SHA of the target branch (e.g., `main`).
--   `HEAD_SHA`: The commit SHA of the source branch (the feature branch).
+The following examples show how to configure your CI pipeline for different use cases.
 
 ### GitHub Actions Example
 
+This workflow runs a fast, targeted scan on every pull request.
+
 ```yaml
 # .github/workflows/secret-detection.yml
-
 name: 'Secret Detection Scan'
-
-# This workflow runs on any pull request targeting the 'main' branch
 on:
   pull_request:
     branches: [ main ]
 
 jobs:
-  # The job that will run your scanner
   gitleaks-scan:
     runs-on: ubuntu-latest
     steps:
-      # Step 1: Check out the repository's code
-      # fetch-depth: 0 is CRUCIAL for git diff to work correctly between the two SHAs.
       - name: 'Check out repository'
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Step 2: Set up the Node.js environment
-      - name: 'Set up Node.js'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20.x'
-
-      # Step 3: Install your secret scanner from npm
-      - name: 'Install gitleaks-secret-scanner'
-        run: npm install -g gitleaks-secret-scanner
-
-      # Step 4: Run the scan using 'ci' mode
-      # continue-on-error: true ensures that the workflow doesn't stop here,
-      # so we can upload the report artifact in the next step.
-      - name: 'Scan for secrets in pull request'
-        id: scan
-        continue-on-error: true
+      - name: 'Run Gitleaks Secret Scanner for Pull Request'
+        run: npx gitleaks-secret-scanner@latest --diff-mode ci --html-report scan-report-mr.html
         env:
-          # Set the required environment variables for your scanner
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: gitleaks-secret-scanner --diff-mode ci --report-format json
-
-      # Step 5: Upload the Json report as a workflow artifact
-      # if: always() ensures this step runs even if the previous step failed.
-      - name: 'Upload Json report artifact'
+      
+      - name: 'Upload HTML Report Artifact'
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: gitleaks-scan-report
-          path: gitleaks-report.json
-      
-      # Step 6: Fail the job if the scan step found secrets
-      # This step checks the outcome of the 'scan' step and fails the workflow explicitly.
-      - name: 'Fail job if secrets were detected'
-        if: steps.scan.outcome == 'failure'
-        run: |
-          echo "❌ Secrets were detected in the pull request. See the 'gitleaks-scan-report' artifact for details."
-          exit 1
+          path: scan-report-mr.html
 ```
+
+### GitLab CI Example
+
+This example demonstrates how to set up two separate jobs: one for merge requests and one for a scheduled weekly audit of recent history.
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - security
+
+secret-scan-mr:
+  stage: security
+  image: node:lts-alpine
+  variables:
+      BASE_SHA: ${CI_MERGE_REQUEST_DIFF_BASE_SHA}
+      HEAD_SHA: ${CI_COMMIT_SHA}
+      
+  script:
+    - npm install -g gitleaks-secret-scanner
+    - gitleaks-secret-scanner --diff-mode ci --html-report scan-report-mr.html
+  artifacts:
+    when: always
+    paths: [scan-report-mr.html]
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+
+secret-scan-weekly:
+  stage: security
+  image: node:lts-alpine
+  variables:
+    # Scan the last 500 commits every week.
+    # This value can be changed in the GitLab UI schedule settings.
+    SCAN_DEPTH: "500"
+  script:
+    - npm install -g gitleaks-secret-scanner
+    - gitleaks-secret-scanner --diff-mode history --depth $SCAN_DEPTH --html-report scan-report-weekly.html
+  artifacts:
+    when: always
+    paths: [scan-report-weekly.html]
+    expire_in: 1 week
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+```
+
+## Known Issues
+
+*   **CLI Argument Parsing:** The current argument parser is intentionally permissive to allow all native Gitleaks flags to be passed through. As a result, it does not throw an error for unknown or misspelled flags (e.g., `gitleaks-secret-scanner --verrbose`). This behavior is scheduled to be improved in a future release with a more intelligent "typo-check" mechanism.
 
 ## License and Attribution
 
-This package is licensed under the MIT License.
-
-It is a wrapper around the **Gitleaks** engine, which is developed by Zachary Rice and is also licensed under the MIT License. This tool would not be possible without the excellent work of the Gitleaks contributors. For full details, run `gitleaks-secret-scanner --about`.
+This package is licensed under the MIT License. It is a wrapper around the **Gitleaks** engine, which is developed by Zachary Rice and is also licensed under the MIT License.

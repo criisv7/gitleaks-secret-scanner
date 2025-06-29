@@ -22,6 +22,9 @@ const runScan = async (binaryPath, config) => {
     case "all":
       finalLeaks = await runAllUncommittedScan(binaryPath, config);
       break;
+    case "history":
+      finalLeaks = await runHistoryScan(binaryPath, config);
+      break;     
     case "staged":
     default:
       finalLeaks = await runStagedScan(binaryPath, config);
@@ -242,7 +245,19 @@ async function runStagedScan(binaryPath, config, silent = false) {
     throw new Error(`Staged scan failed: ${err.message}`);
   }
 }
-
+async function runHistoryScan(binaryPath, config) {
+    const args = ['detect', '--source', '.'];
+    if (config.scanDepth && config.scanDepth > 0) {
+        // If a depth is provided, use it to limit the scan.
+        console.log(`Scanning the last ${config.scanDepth} commit(s) of repository history...`);
+        args.push('--log-opts', `--max-count=${config.scanDepth}`);
+    } else {
+        // Otherwise, scan the entire history and report the total count.
+        const commitCount = parseInt(execSync(`git rev-list --count HEAD`).toString().trim(), 10);
+        console.log(`Scanning ${commitCount} total commits in repository history...`);
+    }
+    return executeGitleaks(binaryPath, args, config);
+}
 function executeGitleaks(binaryPath, args, config) {
   return new Promise((resolve, reject) => {
     const tempReportPath = path.join(

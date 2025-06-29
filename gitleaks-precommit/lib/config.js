@@ -10,6 +10,7 @@ module.exports.loadConfig = async () => {
     reportFormat: null,
     reportPath: null,
     diffMode: "staged",
+    scanDepth: null,
     additionalArgs: [],
   };
 
@@ -66,6 +67,14 @@ module.exports.loadConfig = async () => {
           console.warn("⚠️ --diff-mode flag requires a mode (staged/all/ci).");
         }
         break;
+      case '--depth':
+        if (isFlagWithValue(val) && !isNaN(parseInt(val, 10))) {
+            config.scanDepth = parseInt(val, 10);
+            i++;
+        } else {
+            console.warn("⚠️ --depth flag requires a number.");
+        }
+        break;        
       default:
         remainingArgs.push(arg);
         break;
@@ -74,7 +83,7 @@ module.exports.loadConfig = async () => {
 
   config.additionalArgs = remainingArgs;
 
-  const validDiffModes = ["staged", "all", "ci"];
+  const validDiffModes = ["staged", "all", "ci", "history"];
   if (!validDiffModes.includes(config.diffMode)) {
     console.warn(
       `⚠️ Invalid diff mode: ${config.diffMode}. Defaulting to 'staged'.`
