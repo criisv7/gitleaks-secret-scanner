@@ -1,6 +1,6 @@
 {
   "name": "gitleaks-secret-scanner",
-  "version": "1.1.3",
+  "version": "1.2.0",
   "description": "A powerful, intelligent wrapper for the Gitleaks engine that provides accurate and safe secret scanning for local pre-commit hooks and CI/CD pipelines.",
   "author": "Vijay Kumar",
   "main": "bin/cli.js",
