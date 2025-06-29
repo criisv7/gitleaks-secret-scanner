@@ -127,7 +127,7 @@ stages:
 
 secret-scan-mr:
   stage: security
-  image: node:lts-alpine
+  image: node:lts-bullseye
   variables:
       BASE_SHA: ${CI_MERGE_REQUEST_DIFF_BASE_SHA}
       HEAD_SHA: ${CI_COMMIT_SHA}
@@ -144,14 +144,10 @@ secret-scan-mr:
 
 secret-scan-weekly:
   stage: security
-  image: node:lts-alpine
-  variables:
-    # Scan the last 500 commits every week.
-    # This value can be changed in the GitLab UI schedule settings.
-    SCAN_DEPTH: "500"
+  image: node:lts-bullseye
   script:
     - npm install -g gitleaks-secret-scanner
-    - gitleaks-secret-scanner --diff-mode history --depth $SCAN_DEPTH --html-report scan-report-weekly.html
+    - gitleaks-secret-scanner --diff-mode history --html-report scan-report-weekly.html
   artifacts:
     when: always
     paths: [scan-report-weekly.html]
