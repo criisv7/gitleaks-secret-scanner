@@ -15,11 +15,23 @@ While Gitleaks is a phenomenal tool, this package provides a seamless bridge to 
 ### 🚀 1. Effortless, Zero-Configuration Setup
 The biggest advantage. You no longer need to manually download Gitleaks binaries or write complex scripts to manage different versions for macOS, Windows, and Linux developers on your team. This package handles everything automatically.
 
-### 🧠 2. Truly Accurate CI/CD Scanning
-This is not a simple `git diff | gitleaks` pipe. The `ci` mode is far more intelligent.
--   **It correctly handles removed secrets.** The scan will pass if you remove a secret in a pull request.
--   **It de-duplicates findings.** A secret that exists across multiple commits in a PR is only reported once.
--   **It scans only for newly added secrets.** This is achieved with a sophisticated **"scan-then-filter"** method that ensures perfect accuracy.
+🧠 **2. Truly Accurate & Performant CI/CD Scanning**
+
+This is not a simple `git diff | gitleaks` pipe. The `--diff-mode ci` is far more intelligent, providing a fast and robust way to secure your merge/pull requests. It's built on a "scan final state" philosophy that delivers accuracy and confidence.
+
+Here’s how it works and why it’s better:
+
+*   **Focuses on the Merge Outcome**
+    Instead of analyzing every intermediate commit, `ci` mode identifies all files changed in the pull request and scans their **final content**. This answers the most important question: **"Will this merge introduce a secret into the target branch?"** This approach correctly passes the build if a secret is added and then removed within the same PR.
+
+*   **Comprehensive File Analysis**
+    If you modify a file that *already contains a secret*, `ci` mode will find it. By scanning the *entire content* of any changed file (not just the changed lines), it helps you clean up existing security debt and prevents you from unknowingly propagating old vulnerabilities.
+
+*   **High Performance**
+    The scan is surgical and fast. It gets a simple list of changed files from `git` and runs a targeted Gitleaks scan only on them. This is highly efficient, even for large pull requests with extensive commit histories.
+
+*   **Rich, Actionable Context**
+    Findings are automatically enriched with author, email, and commit data using `git blame`. This makes it trivial to identify the source of a leak and take immediate action, directly from the console output or the HTML report.
 
 ### 🔒 3. Safe and Powerful Local Scanning
 This tool uses advanced, non-invasive strategies to scan your uncommitted work safely and effectively.
