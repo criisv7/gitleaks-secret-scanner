@@ -54,89 +54,65 @@ const runPassThroughCommand = (binaryPath, args) => {
 };
 
 async function runCiScan(binaryPath, config) {
-  const baseSha = process.env.BASE_SHA;
-  const headSha = process.env.HEAD_SHA;
-  if (!baseSha || !headSha) {
-    throw new Error(
-      "For --diff-mode ci, BASE_SHA and HEAD_SHA environment variables must be set."
-    );
-  }
-
-  const commitCount = parseInt(
-    execSync(`git rev-list --count ${baseSha}..${headSha}`).toString().trim(),
-    10
-  );
-  console.log(
-    `Scanning ${commitCount} commit(s) between ${baseSha.slice(
-      0,
-      7
-    )} and ${headSha.slice(0, 7)}...`
-  );
-
-  if (commitCount === 0) {
-    console.log("No new commits to scan.");
-    return [];
-  }
-  const scanArgs = [
-    "detect",
-    "--source",
-    ".",
-    "--log-opts",
-    `${baseSha}..${headSha}`,
-  ];
-  const potentialLeaks = await executeGitleaks(binaryPath, scanArgs, config);
-
-  if (potentialLeaks.length === 0) {
-    return [];
-  }
-
-  console.log("Filtering findings to only include newly added lines...");
-  const diffOutput = execSync(
-    `git diff --unified=0 ${baseSha}..${headSha}`
-  ).toString();
-  const addedLines = new Set();
-  let currentFile = null;
-  let currentLineNum = 0;
-
-  for (const line of diffOutput.split("\n")) {
-    if (line.startsWith("+++ b/")) {
-      currentFile = line.substring(6);
-      continue;
+    const baseSha = process.env.BASE_SHA;
+    const headSha = process.env.HEAD_SHA;
+    // A missing HEAD_SHA is always a fatal error.
+    if (!headSha) {
+        throw new Error('For --diff-mode ci, the HEAD_SHA environment variable must be set, but it was not found.');
     }
-    if (!currentFile) {
-      continue;
+    // If BASE_SHA is missing or identical to HEAD_SHA, it means there's no diff.
+    if (!baseSha || baseSha === headSha) {
+        console.log('✅ BASE_SHA not provided or is identical to HEAD_SHA. Concluding there are no changes to scan.');
+        return [];
     }
-    if (line.startsWith("@@")) {
-      const match = line.match(/\+([0-9]+)/);
-      if (match) {
-        currentLineNum = parseInt(match[1], 10);
-      }
-      continue;
+    console.log(`Scanning final state of changed files between ${baseSha.slice(0,7)} and ${headSha.slice(0,7)}...`);
+    //Get a list of all files that have changed in the pull request.
+    const changedFilesOutput = execSync(`git diff --name-only ${baseSha}..${headSha}`).toString().trim();
+    if (!changedFilesOutput) {
+        console.log('✅ No files changed in this PR to scan.');
+        return [];
     }
-    if (line.startsWith("+")) {
-      addedLines.add(`${currentFile}:${currentLineNum}`);
-      currentLineNum++;
-    } else if (line.startsWith(" ")) {
-      currentLineNum++;
+    const changedFiles = changedFilesOutput.split('\n');
+    console.log(`Found ${changedFiles.length} changed file(s) to scan...`);
+    //Run Gitleaks on ONLY the final state of those changed files.
+    const args = ['detect', '--no-git'];
+    const filesToScan = [];
+    for (const file of changedFiles) {
+        if (fs.existsSync(file)) {
+            args.push('--source', file);
+            filesToScan.push(file);
+        }
     }
-  }
-
-  const finalLeaks = potentialLeaks.filter((leak) => {
-    const key = `${leak.File}:${leak.StartLine}`;
-    return addedLines.has(key);
-  });
-  const deduplicatedLeaks = [];
-  const processedLines = new Set();
-
-  for (const leak of finalLeaks) {
-    const uniqueKey = `${leak.File}:${leak.StartLine}`;
-    if (!processedLines.has(uniqueKey)) {
-      deduplicatedLeaks.push(leak);
-      processedLines.add(uniqueKey);
+    if (filesToScan.length === 0) {
+        console.log('✅ All changes were deletions, no files to scan.');
+        return [];
     }
-  }
-
-  return deduplicatedLeaks;
+    const leaks = await executeGitleaks(binaryPath, args, config);
+    if (leaks.length === 0) {
+        return [];
+    }
+    
+    //Enrich the findings with author data using `git blame`.
+    console.log(`Enriching ${leaks.length} finding(s) with author data...`);
+    const enrichedLeaks = [];
+    for (const leak of leaks) {
+        try {
+            const blameOutput = execSync(`git blame -L ${leak.StartLine},${leak.StartLine} --porcelain ${headSha} -- "${leak.File}"`).toString();
+            const commitMatch = blameOutput.match(/^([a-f0-9]{40})/m);
+            const authorMatch = blameOutput.match(/^author (.+)/m);
+            const mailMatch = blameOutput.match(/^author-mail <(.+)>/m);
+            const timeMatch = blameOutput.match(/^author-time ([0-9]+)/m);
+            if (commitMatch) leak.Commit = commitMatch[1];
+            if (authorMatch) leak.Author = authorMatch[1];
+            if (mailMatch) leak.Email = mailMatch[1];
+            if (timeMatch) leak.Date = new Date(parseInt(timeMatch[1], 10) * 1000).toISOString();
+            enrichedLeaks.push(leak);
+        } catch (e) {
+            console.warn(`Could not run git blame on file ${leak.File}, some report data may be missing.`);
+            enrichedLeaks.push(leak);
+        }
+    }
+    return enrichedLeaks;
 }
 
 async function runAllUncommittedScan(binaryPath, config) {
