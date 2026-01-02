@@ -3,7 +3,7 @@ const fs = require("fs");
 
 const fallbackPackageInfo = {
   name: "gitleaks-secret-scanner",
-  version: "1.2.2",
+  version: "2.0.0-beta.1",
   repository: { url: "https://github.com/criisv7/gitleaks-secret-scanner" },
 };
 
@@ -60,17 +60,38 @@ options below or pass any valid Gitleaks flag directly.
 
 --- Wrapper-Specific Options ---
 
-  --diff-mode <mode>    Sets the scan scope. Modes:
-                        'staged': (default) Scans only staged files for pre-commit hooks.
-                        'all': Scans all uncommitted changes (staged and unstaged).
-                        'ci': Scans a pull request commit range (requires CI variables).
-                        'history': Scans the entire repository history.
+  --diff-mode <mode>       Sets the scan scope. Modes:
+                           'staged': (default) Scans only staged files for pre-commit hooks.
+                           'all': Scans all uncommitted changes (staged and unstaged).
+                           'ci': Scans a pull request commit range (requires CI variables).
+                           'history': Scans the entire repository history.
 
-  --html-report [path]  Generates a rich, user-friendly HTML report.
-                        Defaults to 'gitleaks-report.html' if no path is given.
+  --html-report [path]     Generates a rich, user-friendly HTML report.
+                           Defaults to 'gitleaks-report.html' if no path is given.
 
-  --depth <number>      Used with '--diff-mode history' to limit the scan
-                        to the last <number> of commits.
+  --depth <number>         Used with '--diff-mode history' to limit the scan
+                           to the last <number> of commits.
+
+  --gitleaks-version <ver> Specify a specific Gitleaks version to use (e.g., '8.27.2').
+
+--- Version Management ---
+
+  --select-version         Interactive version selector - shows available Gitleaks
+                           versions and lets you choose which one to install.
+
+  --manage-versions        Manage cached Gitleaks versions. View all cached versions
+                           and optionally clean up old ones to free disk space.
+
+  --clean-all              Delete all cached Gitleaks versions to free disk space.
+                           WARNING: This removes all downloaded binaries.
+
+--- Husky Integration ---
+
+  --setup-husky            Automatically setup Husky git hooks with Gitleaks.
+                           Creates or updates the pre-commit hook to run secret scanning.
+
+  --command <cmd>          Used with '--setup-husky' to specify a custom command
+                           for the pre-commit hook. Defaults to 'npx gitleaks-secret-scanner'.
 
 --- Common Gitleaks Flags (Passed Directly to the Engine) ---
 
@@ -89,6 +110,7 @@ options below or pass any valid Gitleaks flag directly.
   --init                Creates a default .gitleaks.toml configuration file.
   --install-only        Downloads the Gitleaks binary without running a scan.
   --version             Show the version of this wrapper package.
+  --engine-version      Show detailed information about the Gitleaks engine being used.
   --about               Display attribution information for the wrapper and Gitleaks.
   --options             Show this help menu.
   --help                Show the complete, native help menu from the Gitleaks engine.

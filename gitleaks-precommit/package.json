@@ -1,6 +1,6 @@
 {
   "name": "gitleaks-secret-scanner",
-  "version": "1.2.2",
+  "version": "2.0.0-beta.1",
   "description": "A powerful, intelligent wrapper for the Gitleaks engine that provides accurate and safe secret scanning for local pre-commit hooks and CI/CD pipelines.",
   "author": "Vijay Kumar",
   "main": "bin/cli.js",
@@ -8,14 +8,23 @@
     "gitleaks-secret-scanner": "bin/cli.js"
   },
   "scripts": {
-    "postinstall": "node bin/set-permissions.js && node bin/cli.js --install-only"
+    "postinstall": "node bin/set-permissions.js && node bin/postinstall.js",
+    "preuninstall": "node bin/preuninstall.js"
   },
   "dependencies": {
-    "axios": "^1.7.2",
+    "axios": "^1.11.0",
     "fs-extra": "^11.2.0",
     "tar": "^6.2.1",
     "toml": "^3.0.0",
     "unzipper": "^0.12.3"
+  },
+  "peerDependencies": {
+    "husky": ">=9.0.0"
+  },
+  "peerDependenciesMeta": {
+    "husky": {
+      "optional": true
+    }
   },
   "license": "MIT",
   "repository": {

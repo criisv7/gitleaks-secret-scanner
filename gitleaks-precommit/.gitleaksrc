@@ -1,6 +1,6 @@
 {
 
-  "version": "8.27.2",
+  "version": "8.30.0",
   "verbosity": "info",
   "outputFormat": "json", 
   "redactOutput": false,
