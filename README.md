@@ -332,3 +332,5 @@ npx gitleaks-secret-scanner
 *   **CLI Argument Parsing:** The current argument parser is intentionally permissive to allow all native Gitleaks flags to be passed through. As a result, it does not throw an error for unknown or misspelled flags (e.g., `gitleaks-secret-scanner --verrbose`). This behavior is scheduled to be improved in a future release with a more intelligent "typo-check" mechanism.
 
 ## License and Attribution
+
+This package is licensed under the MIT License. It is a wrapper around the **Gitleaks** engine, which is developed by Zachary Rice and is also licensed under the MIT License.

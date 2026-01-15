@@ -7,45 +7,54 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.1.1] - 2026-01-15
 
-### Major UX Overhaul - Production Ready 🚀
+### Stable Release - Beta Graduation 🚀
 
-This release represents a complete overhaul of the user experience with comprehensive error handling, graceful degradation, and intelligent version management. The package now handles edge cases elegantly and never leaves users stuck.
+This is the **stable release** of v2.0.0-beta.1 with critical bug fixes. The new architecture introduced in beta is now production-ready for downloads.
 
-### Added
+**Upgrade from v2.0.0-beta.1**: Critical bug fixes included - upgrade recommended
+**Upgrade from v1.x**: All features backward compatible - safe to upgrade
+
+### What's New Since v1.x (Introduced in Beta)
+
+#### Intelligent Installation System
+- Automatic Gitleaks binary management with caching
+- Multi-version support in `~/.gitleaks-cache/`
+- Smart fallback to v8.30.0 if GitHub API unreachable
+- Cross-platform support (macOS, Linux, Windows)
+- Multi-architecture ready (x64, arm64, armv7, x32)
+
+#### Husky Integration
+- Interactive Git hook setup during local installation
+- Automated pre-commit scanning with Gitleaks
+- Zero-config experience with simple prompts
+- Manual setup: `npx gitleaks-secret-scanner --setup-husky`
 
 #### Graceful Degradation System
-- **Context-aware error messages** throughout the entire package
-- **Specific troubleshooting guidance** for common error scenarios:
-  - Network errors (ECONNREFUSED, ENOTFOUND, timeouts)
-  - Permission errors (EACCES, EPERM)
-  - File not found errors (ENOENT)
-  - 404 errors for unsupported platforms
-- **Timeout protection** to prevent hanging:
-  - 5-second timeout for latest version fetching
-  - 10-second timeout for version list fetching
-- **Manual fallback instructions** when automation fails
+- Context-aware error messages throughout the package
+- Specific troubleshooting guidance for common scenarios
+- Timeout protection (5s/10s) to prevent hanging
+- Manual fallback instructions when automation fails
 
 #### Version Management Improvements
-- **Smart cleanup prompts** based on number of cached versions:
+- Smart cleanup prompts based on number of cached versions:
   - 1 version: No prompt (nothing to clean up)
   - 2 versions: Simple yes/no prompt to delete older version
   - 3+ versions: Numeric "keep latest X" prompt (default: 2)
 - Better version size display and cache location info
-- Improved version selection UX
+- Cache cleanup utilities: `--manage-versions`, `--clean-all`
 
 
-### Fixed
+### Fixed in v2.1.1 (Beta → Stable)
 
 #### Critical Bug Fixes
-- **Pre-commit hook detection bug** - Previously matched comments and echo statements containing "gitleaks-secret-scanner" text
-  - Now uses regex pattern matching to detect only actual command execution
-  - Patterns: `/^\s*npx\s+gitleaks-secret-scanner/m` and `/^\s*gitleaks-secret-scanner/m`
+- **Pre-commit hook detection bug** - Previously matched comments and echo statements
+  - Now uses regex pattern matching: `/^\s*npx\s+gitleaks-secret-scanner/m`
   - Prevents duplicate commands in pre-commit hooks
 
 - **Uninstall cleanup** - Interactive prompt didn't work due to npm lifecycle limitations
-  - Changed from interactive readline prompt to informational display
-  - Now shows cached versions and provides manual cleanup instructions
-  - Works reliably in all install contexts (local, global, CI/CD)
+  - Changed to informational display that works reliably
+  - Shows cached versions with manual cleanup instructions
+  - Works in all install contexts (local, global, CI/CD)
 
 ### Improved
 
