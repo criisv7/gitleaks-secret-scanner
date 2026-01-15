@@ -49,7 +49,8 @@
     "lib",
     "templates",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "CHANGELOG.md"
   ],
   "bugs": {
     "url": "https://github.com/criisv7/gitleaks-secret-scanner/issues"
