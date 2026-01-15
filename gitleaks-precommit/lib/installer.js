@@ -7,7 +7,7 @@ const unzipper = require("unzipper");
 
 let packageInfo = {
   name: "gitleaks-secret-scanner",
-  version: "2.0.0-beta.1",
+  version: "2.0.0",
   repository: { url: "https://github.com/criisv7/gitleaks-secret-scanner" },
 };
 
