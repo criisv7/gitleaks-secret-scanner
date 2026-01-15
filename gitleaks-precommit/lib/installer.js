@@ -110,7 +110,6 @@ module.exports.installGitleaks = async (config) => {
       fs.chmodSync(binaryPath, 0o755);
     }
 
-    console.log("✅ Gitleaks binary successfully installed.");
     return binaryPath;
   } catch (error) {
     console.error(
@@ -207,14 +206,11 @@ function getFileName(version, platform, arch) {
 
   const ext = osName === "windows" ? "zip" : "tar.gz";
   const fileName = `gitleaks_${version}_${osName}_${archName}.${ext}`;
-
-  console.log(`Generated file name for download: ${fileName}`);
   return fileName;
 }
 
 async function downloadAndExtract(url, targetDir, platform) {
   return new Promise((resolve, reject) => {
-    console.log("Starting download...");
     const headers = {
       "User-Agent": `${packageInfo.name}/${packageInfo.version}`,
     };
@@ -225,7 +221,6 @@ async function downloadAndExtract(url, targetDir, platform) {
         response.statusCode < 400 &&
         response.headers.location
       ) {
-        console.log("Redirecting to:", response.headers.location);
         downloadAndExtract(response.headers.location, targetDir, platform)
           .then(resolve)
           .catch(reject);
@@ -240,17 +235,14 @@ async function downloadAndExtract(url, targetDir, platform) {
 
       let extractor;
       if (platform === "win32") {
-        console.log("Using ZIP extractor for Windows...");
         extractor = unzipper.Extract({ path: targetDir });
       } else {
-        console.log("Using TAR extractor for macOS/Linux...");
         extractor = tar.x({ C: targetDir });
       }
 
       response
         .pipe(extractor)
         .on("finish", () => {
-          console.log("Extraction complete.");
           resolve();
         })
         .on("error", (err) => {

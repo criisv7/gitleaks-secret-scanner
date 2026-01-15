@@ -120,7 +120,7 @@ async function promptVersionSelection(versions) {
  */
 async function selectVersion() {
   try {
-    console.log("🔍 Fetching available Gitleaks versions from GitHub...\n");
+    console.log("🔍 Fetching available Gitleaks versions ...\n");
     const versions = await fetchAvailableVersions(20);
 
     if (versions.length === 0) {
@@ -271,6 +271,12 @@ async function manageVersions() {
     )}\n`
   );
 
+  // If only one version, no cleanup needed
+  if (versions.length === 1) {
+    console.log("💡 Only one version cached. No cleanup needed.\n");
+    return;
+  }
+
   const readline = require("readline");
   const rl = readline.createInterface({
     input: process.stdin,
@@ -278,29 +284,50 @@ async function manageVersions() {
   });
 
   return new Promise((resolve) => {
-    rl.question("Clean up old versions? Keep latest [3]: ", (answer) => {
-      rl.close();
+    // Different prompt for 2 versions vs 3+
+    if (versions.length === 2) {
+      rl.question("Delete the older version? [y/N]: ", (answer) => {
+        rl.close();
 
-      const keepCount = parseInt(answer, 10) || 3;
+        const shouldDelete = answer.trim().toLowerCase() === 'y';
 
-      if (isNaN(keepCount) || keepCount < 1) {
-        console.log("\n❌ Invalid number. Aborting.\n");
+        if (shouldDelete) {
+          const removed = cleanOldVersions(1);
+          if (removed.length > 0) {
+            console.log(`\n✅ Removed: ${removed[0]}\n`);
+          }
+        } else {
+          console.log("\n✅ Keeping both versions.\n");
+        }
+
         resolve();
-        return;
-      }
+      });
+    } else {
+      const defaultKeep = 2;
+      rl.question(`Clean up old versions? Keep latest [${defaultKeep}]: `, (answer) => {
+        rl.close();
 
-      const removed = cleanOldVersions(keepCount);
+        const keepCount = answer.trim() === '' ? defaultKeep : parseInt(answer, 10);
 
-      if (removed.length > 0) {
-        console.log(`\n✅ Removed ${removed.length} old version(s):`);
-        removed.forEach((v) => console.log(`   - ${v}`));
-        console.log("");
-      } else {
-        console.log(`\n✅ Keeping all ${versions.length} version(s).\n`);
-      }
+        if (isNaN(keepCount) || keepCount < 1) {
+          console.log("\n❌ Invalid number. Aborting.\n");
+          resolve();
+          return;
+        }
 
-      resolve();
-    });
+        const removed = cleanOldVersions(keepCount);
+
+        if (removed.length > 0) {
+          console.log(`\n✅ Removed ${removed.length} old version(s):`);
+          removed.forEach((v) => console.log(`   - ${v}`));
+          console.log("");
+        } else {
+          console.log(`\n✅ Keeping all ${versions.length} version(s).\n`);
+        }
+
+        resolve();
+      });
+    }
   });
 }
 
